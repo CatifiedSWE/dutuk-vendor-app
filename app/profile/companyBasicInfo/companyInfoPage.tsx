@@ -8,22 +8,83 @@ import {
 } from "react-native";
 
 const CompanyInfoPage = () => {
-  const [editable, setEditable] = useState(false);
+  const [company, setCompany] = useState(false);
+  const [mail, setMail] = useState(false);
+  const [phone, setPhone] = useState(false);
+  const [address, setAddress] = useState(false);
+  const [website, setWebsite] = useState(false);
 
   return (
     <View style={styles.screen}>
+      <Text style={styles.headerStyle}>Company Basic Info</Text>
       <View style={styles.inputRow}>
         <TextInput
-          style={[styles.input, editable && styles.inputEditable]}
+          style={[styles.input, company && styles.inputEditable]}
           placeholder="Company name"
-          editable={editable}
+          editable={company}
         />
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => setEditable(!editable)}
+          onPress={() => setCompany(!company)}
         >
           {/* A edit emoji */}
-          <Text style={styles.editText}>✏️</Text>
+          <Text style={styles.editText}>📝</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[styles.input, mail && styles.inputEditable]}
+          placeholder="Mail"
+          editable={mail}
+        />
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setMail(!mail)}
+        >
+          {/* A edit emoji */}
+          <Text style={styles.editText}>📝</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[styles.input, address && styles.inputEditable]}
+          placeholder="Address"
+          editable={address}
+        />
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setAddress(!address)}
+        >
+          {/* A edit emoji */}
+          <Text style={styles.editText}>📝</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[styles.input, phone && styles.inputEditable]}
+          placeholder="Phone Number"
+          editable={phone}
+        />
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setPhone(!phone)}
+        >
+          {/* A edit emoji */}
+          <Text style={styles.editText}>📝</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[styles.input, website && styles.inputEditable]}
+          placeholder="Website"
+          editable={website}
+        />
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setWebsite(!website)}
+        >
+          {/* A edit emoji */}
+          <Text style={styles.editText}>📝</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -59,11 +120,16 @@ const styles = StyleSheet.create({
   editButton: {
     marginLeft: 10,
     padding: 10,
-    backgroundColor: "#007BFF",
+    backgroundColor: "black",
     borderRadius: 8,
   },
   editText: {
     color: "white",
     fontSize: 16,
+  },
+  headerStyle: {
+    fontSize: 30,
+    textAlign: "center",
+    marginBottom: 50,
   },
 });
