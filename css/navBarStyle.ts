@@ -26,7 +26,9 @@ const navBarStyle = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     position: 'absolute',
-    zIndex: 10
+    zIndex: 10,
+    flex:1,
+    gap:10
 
     
   },

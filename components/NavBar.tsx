@@ -1,7 +1,7 @@
 import navBarStyle from "@/css/navBarStyle";
-import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, Pressable, Text, View } from "react-native";
+import RouteAssist from "./RouteAssist";
 
 const NavBar = () => {
   const [visible, setVisible] = useState(false);
@@ -24,8 +24,9 @@ const NavBar = () => {
         <Pressable onPress={handleNavBarVisibility}>
           <Text style={navBarStyle.innerNavButtonText}>=</Text>
         </Pressable>
-        <Pressable onPress={()=>router.push("/profile/legal")}><Text style={navBarStyle.links}>Legal</Text></Pressable>
-        <Pressable onPress={()=>router.push("/profile/profileSettings")}><Text style={navBarStyle.links}>Profile Settings</Text></Pressable>
+        <RouteAssist path="/profile/legal" text="Legal" />
+        <RouteAssist path="/profile/profileSettings" text="Profile Settings" />
+        <RouteAssist path="/profile/message" text="Chat" />
       </Animated.View>
     );
   } else {
