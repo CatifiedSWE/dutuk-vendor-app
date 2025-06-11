@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "dutuk_frontend",
-    "slug": "dutuk_frontend",
+    "name": "dutukfrontend",
+    "slug": "dutukfrontend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -38,6 +38,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "97c03a82-f4a5-4d56-b302-59d4bc033cc5"
+      }
     }
   }
 }
