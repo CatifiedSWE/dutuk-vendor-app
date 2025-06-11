@@ -1,31 +1,60 @@
 import { supabase } from "@/utils/supabase";
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 
+WebBrowser.maybeCompleteAuthSession();
+
 const googleLogin = async () => {
-  try {
-    const { data } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        skipBrowserRedirect: true,
-      },
-    });
+  const redirectUrl = Linking.createURL("auth/callback");
 
-    if (data?.url) {
-      const result = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        undefined,
-        {
-          preferEphemeralSession: true,
-        }
-      );
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectUrl,
+      skipBrowserRedirect: true,
+    },
+  });
 
-      router.replace("/(tabs)/home");
+  if (error) {
+    console.log("Login error:", error);
+    return;
+  }
+
+  const authUrl = data?.url;
+  console.log("🔗 Auth URL:", authUrl);
+  if (!authUrl) return;
+
+  const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+
+  if (result.type === "success" && result.url) {
+    console.log("Received redirect URL:", result.url);
+
+    const params = new URLSearchParams(result.url.split("#")[1]);
+
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
+
+    if (access_token && refresh_token) {
+      const {
+        data: sessionData,
+        error: sessionError,
+      } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (sessionError) {
+        console.log(" setSession error:", sessionError);
+      } else {
+        console.log("Session obtained via token:", sessionData);
+        router.replace("/(tabs)/home");
+      }
     } else {
-      router.replace("/(tabs)/home");
+      console.log("Tokens missing from redirect URL");
     }
-  } catch {
-    router.replace("/(tabs)/home");
+  } else {
+    console.log("Auth session failed or cancelled.");
   }
 };
 
