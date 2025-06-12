@@ -1,10 +1,14 @@
-import { Text, View } from "react-native";
+import DisplayReviews from "@/components/DisplayReviews";
+import pastReviews from "@/dummy_data/pastReviewsData";
+import { View } from "react-native";
 
 
 const PastReviews = ()=>{
+    //getting the dummy data
+    const data = pastReviews;
     return(
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text style={{ fontWeight: "bold", fontSize: 40 }}>Past Reviews</Text>
+        <View>
+            <DisplayReviews reviews={data}/>
         </View>
     )
 }

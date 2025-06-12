@@ -1,10 +1,13 @@
-import { Text, View } from "react-native";
+import DisplayEarnings from "@/components/DisplayEarnings";
+import pastEarnings from "@/dummy_data/pastEarnings";
+import { View } from "react-native";
 
 
 const PastEarnings = ()=>{
+    const data = pastEarnings;
     return(
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text style={{ fontWeight: "bold", fontSize: 40 }}>Past Earnings</Text>
+            <DisplayEarnings earnings={data} />
         </View>
     )
 }

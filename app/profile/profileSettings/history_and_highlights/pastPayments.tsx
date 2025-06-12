@@ -1,10 +1,12 @@
-import { Text, View } from "react-native";
-
+import DisplayPayments from "@/components/DisplayPayments";
+import pastPayments from "@/dummy_data/pastPaymentsData";
+import { View } from "react-native";
 
 const PastPayments = ()=>{
+    const data = pastPayments;
     return(
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text style={{ fontWeight: "bold", fontSize: 40 }}>Past Payments</Text>
+        <View>
+            <DisplayPayments payments={data} />
         </View>
     )
 }
