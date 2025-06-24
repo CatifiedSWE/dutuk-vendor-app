@@ -14,11 +14,7 @@ export default function AuthCallback() {
         const { data, error } = await supabase.auth.exchangeCodeForSession(url);
         if (error) console.error("exchangeCodeForSession error", error);
 
-        const user = data?.user;
-
-        if (user) {
-          router.replace("/(tabs)/home");
-        }
+        // router.replace("/(tabs)/home");
       }
     };
 
