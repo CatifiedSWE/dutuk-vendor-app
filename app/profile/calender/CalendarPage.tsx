@@ -78,11 +78,7 @@ const CalendarPage = ()=>{
                 {
                 cancelable: true,
     },
-  );
-
-                    
-                   
-                    
+  ); 
                 }
                 else setMarked([...marked,day.dateString]);
                await storeDates(day.dateString);
