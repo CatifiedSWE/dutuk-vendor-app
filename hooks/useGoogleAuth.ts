@@ -23,13 +23,11 @@ const googleLogin = async () => {
   }
 
   const authUrl = data?.url;
-  console.log("🔗 Auth URL:", authUrl);
   if (!authUrl) return;
 
   const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
 
   if (result.type === "success" && result.url) {
-    console.log("Received redirect URL:", result.url);
 
     const params = new URLSearchParams(result.url.split("#")[1]);
 
@@ -47,7 +45,6 @@ const googleLogin = async () => {
         console.log(" setSession error:", sessionError);
       } else {
         await setRole();
-        console.log("Session obtained via token:", sessionData);
         router.replace("/(tabs)/home");
       }
     } else {
