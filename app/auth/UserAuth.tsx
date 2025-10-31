@@ -1,22 +1,8 @@
 import React from "react";
-import { View } from "react-native";
-import AuthButton from "../../components/AuthButton";
+import WelcomeScreen from "../../components/WelcomeScreen";
 
 const UserAuth = () => {
-  return (
-    <View>
-      <AuthButton
-        buttonText="Login"
-        route="/auth/UserLogin"
-        buttonColorType="button"
-      />
-      <AuthButton
-        buttonText="Register"
-        route="/auth/UserRegister"
-        buttonColorType="buttonSecondary"
-      />
-    </View>
-  );
+  return <WelcomeScreen />;
 };
 
 export default UserAuth;

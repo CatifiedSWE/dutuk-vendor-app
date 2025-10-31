@@ -25,23 +25,23 @@ const Index = () => {
       <Text style={profileSettingsMenuStyle.title}>Profile Settings</Text>
       <View style={profileSettingsMenuStyle.optionsView}>
         <RouteAssist
-          path={"/profile/companyBasicInfo/companyInfoPage"}
+          path={"/profilePages/companyBasicInfo/companyInfoPage"}
           text={"Company's Basic Information"}
         />
         <RouteAssist
-          path={"/profile/profileSettings/documentVerification"}
+          path={"/profilePages/profileSettings/documentVerification"}
           text={"Document Verification"}
         />
         {
           isEmail &&
         <RouteAssist
-          path={"/profile/profileSettings/changePasswordOtp"}
+          path={"/profilePages/profileSettings/changePasswordOtp"}
           text={"Change Password"}
         />
 
 }
         <RouteAssist
-          path={"/profile/profileSettings/changeUsername"}
+          path={"/profilePages/profileSettings/changeUsername"}
           text={"Change Username"}
         />
         <RouteAssist

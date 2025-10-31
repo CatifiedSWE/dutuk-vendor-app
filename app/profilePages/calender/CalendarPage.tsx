@@ -91,7 +91,7 @@ const CalendarPage = ()=>{
                     setMarked([...marked,date.dateString]);
                     await storeDates(date.dateString);
                 }
-                router.push({pathname:"/profile/calender/CalendarRedirect",params:{date:date.dateString}})
+                router.push({pathname:"/profilePages/calender/CalendarRedirect",params:{date:date.dateString}})
             }}
               
 

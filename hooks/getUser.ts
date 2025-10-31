@@ -1,22 +1,28 @@
 import { supabase } from "@/utils/supabase";
 
-const getUser = async()=>{
+const getUser = async() => {
     try {
-                // Get the current user from the session
-                const {
-                  data: { user },
-                  error: authError,
-                } = await supabase.auth.getUser();
-            
-                if (authError || !user) {
-                  console.error("Authentication error:", authError);
-                  return;
-                }
-            
-                return user;
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('User fetch timeout')), 3000)
+        );
+        
+        const userPromise = supabase.auth.getUser();
+        
+        const { data: { user }, error: authError } = await Promise.race([
+            userPromise, 
+            timeoutPromise
+        ]) as any;
+    
+        if (authError) {
+            console.error("Authentication error:", authError);
+            return null;
         }
-        catch(e){
-            console.error(e);
-        }        
+    
+        return user;
+    } catch (error) {
+        console.error("Error getting user:", error);
+        return null;
+    }        
 }
 export default getUser;

@@ -30,7 +30,7 @@ const ChangePasswordOtpPage = () => {
     <AuthOTP
       email={email}
       cell_count={6}
-      route={"/profile/profileSettings/changePassword"}
+      route={"/profilePages/profileSettings/changePassword"}
       title="Verify your email before you change password"
       subtitle="Enter the 6 digit code sent to your email"
       initOTP={true}

@@ -24,9 +24,9 @@ const NavBar = () => {
         <Pressable onPress={handleNavBarVisibility}>
           <Text style={navBarStyle.innerNavButtonText}>=</Text>
         </Pressable>
-        <RouteAssist path="/profile/legal" text="Legal" />
-        <RouteAssist path="/profile/profileSettings" text="Profile Settings" />
-        <RouteAssist path="/profile/message" text="Chat" />
+        <RouteAssist path="/profilePages/legal" text="Legal" />
+        <RouteAssist path="/profilePages/profileSettings" text="Profile Settings" />
+        <RouteAssist path="/profilePages/message" text="Chat" />
       </Animated.View>
     );
   } else {

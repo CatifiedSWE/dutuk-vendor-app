@@ -7,7 +7,7 @@ import { User } from 'react-native-gifted-chat';
 const UserCard = (user:User) => {
   return (
     <TouchableOpacity style={styles.card} onPress={()=>{router.push({
-  pathname: "/profile/message/chatPage",
+  pathname: "/profilePages/message/chatPage",
   params: {
     _id: user._id.toString(),
     name: user.name,
