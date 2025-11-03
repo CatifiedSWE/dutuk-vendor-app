@@ -1,174 +1,129 @@
 import { supabase } from "@/utils/supabase";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
-} from "react-native";
-import Toast from 'react-native-toast-message';
+import React, { useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import Toast from "react-native-toast-message";
 
 const OtpPage = () => {
   const { email } = useLocalSearchParams();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(59);
+  const [loading, setLoading] = useState(false);
+  const inputs = useRef<TextInput[]>([]);
 
+  // Countdown timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
+    const timer = setInterval(
+      () => setCountdown((t) => (t > 0 ? t - 1 : 0)),
+      1000
+    );
     return () => clearInterval(timer);
   }, []);
 
-  const handleOtpChange = (value: string, index: number) => {
-    if (value.length > 1) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = `otp-${index + 1}`;
-      // Focus next input (you'd need refs for this in a real implementation)
+  const handleChange = (text: string, index: number) => {
+    // Handle paste of full OTP
+    if (text.length > 1) {
+      const digits = text.slice(0, 6).split("");
+      setOtp(digits.concat(Array(6 - digits.length).fill("")));
+      digits.length === 6 && inputs.current[5]?.blur();
+      return;
     }
+
+    const updated = [...otp];
+    updated[index] = text;
+    setOtp(updated);
+
+    if (text && index < 5) inputs.current[index + 1]?.focus();
+  };
+
+  const handleKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0)
+      inputs.current[index - 1]?.focus();
   };
 
   const handleVerify = async () => {
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please enter complete OTP'
-      });
-      return;
+    const code = otp.join("");
+    if (code.length !== 6) {
+      return Toast.show({ type: "error", text1: "Please enter full OTP" });
     }
 
     setLoading(true);
     try {
       const { error } = await supabase.auth.verifyOtp({
         email: email as string,
-        token: otpCode,
-        type: 'email'
+        token: code,
+        type: "email",
       });
 
-      if (error) {
-        console.log('OTP verification error:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Verification Failed',
-          text2: error.message
-        });
-      } else {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Email verified successfully!'
-        });
-        
-        // Import setRole function
-        try {
-          const setRole = (await import('@/hooks/setVendorAsRoleOnRegister')).default;
-          await setRole();
-        } catch (roleError) {
-          console.log('Role setting error:', roleError);
-        }
-        
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
+      if (error) throw error;
+
+      Toast.show({ type: "success", text1: "OTP Verified!" });
+      const setRole = (await import("@/hooks/setVendorAsRoleOnRegister"))
+        .default;
+      await setRole();
+      router.replace("/(tabs)");
+    } catch (err: any) {
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Verification failed'
+        type: "error",
+        text1: "Verification failed",
+        text2: err.message || "Please try again",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendCode = async () => {
+  const handleResend = async () => {
     if (countdown > 0) return;
-
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email as string,
-      });
-
-      if (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to resend code'
-        });
-      } else {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'New code sent!'
-        });
-        setCountdown(59);
-      }
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to resend code'
-      });
+      await supabase.auth.signInWithOtp({ email: email as string });
+      Toast.show({ type: "success", text1: "New code sent!" });
+      setCountdown(59);
+    } catch {
+      Toast.show({ type: "error", text1: "Failed to resend code" });
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        {/* Header */}
-        <Text style={styles.headerText}>Enter OTP</Text>
-        <Text style={styles.subHeaderText}>
-          We have sent you an otp to {email} for verification
-        </Text>
+        <Text style={styles.header}>Enter OTP</Text>
+        <Text style={styles.subHeader}>Code sent to {email}</Text>
 
-        {/* OTP Input Fields */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
+        <View style={styles.otpRow}>
+          {otp.map((val, i) => (
             <TextInput
-              key={index}
-              style={styles.otpInput}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              keyboardType="numeric"
+              key={i}
+             ref={(ref) => {
+  if (ref) inputs.current[i] = ref;
+}}
+              style={styles.input}
+              keyboardType="number-pad"
               maxLength={1}
+              value={val}
+              onChangeText={(t) => handleChange(t, i)}
+              onKeyPress={(e) => handleKeyPress(e, i)}
               textAlign="center"
-              editable={!loading}
+              autoFocus={i === 0}
             />
           ))}
         </View>
 
-        {/* Verify Button */}
         <Pressable
-          style={[styles.verifyButton, loading && styles.buttonDisabled]}
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleVerify}
           disabled={loading}
         >
-          <Text style={styles.verifyButtonText}>
-            {loading ? 'Verifying...' : 'Verify'}
+          <Text style={styles.buttonText}>
+            {loading ? "Verifying..." : "Verify"}
           </Text>
         </Pressable>
 
-        {/* Resend Code */}
-        <Pressable onPress={handleResendCode} disabled={countdown > 0}>
-          <Text style={[styles.resendText, countdown > 0 && styles.resendDisabled]}>
-            {countdown > 0 ? `Resend code in ${countdown} secs` : 'Resend code'}
+        <Pressable onPress={handleResend} disabled={countdown > 0}>
+          <Text style={[styles.resend, countdown > 0 && styles.resendDisabled]}>
+            {countdown > 0
+              ? `Resend code in ${countdown}s`
+              : "Resend code"}
           </Text>
         </Pressable>
       </View>
@@ -179,85 +134,55 @@ const OtpPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
   },
   card: {
-    width: 407,
+    width: 400,
     height: 933,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 25.2,
+    backgroundColor: "#fff",
+    borderRadius: 25,
+    paddingTop: 260,
     paddingHorizontal: 30,
-    paddingTop: 280,
-    paddingBottom: 40,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4.8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 22.68,
-    elevation: 10,
-    marginLeft: -5,
-    marginTop: -23,
   },
-  headerText: {
+  header: {
     fontSize: 26,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     marginBottom: 16,
   },
-  subHeaderText: {
-    fontSize: 18.5493,
-    fontWeight: '400',
-    color: '#000000',
-    textAlign: 'center',
+  subHeader: {
+    fontSize: 18,
+    textAlign: "center",
     marginBottom: 60,
-    lineHeight: 22,
   },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  otpRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 50,
-    paddingHorizontal: 3,
   },
-  otpInput: {
-    width: 47.39,
-    height: 47.39,
+  input: {
+    width: 47,
+    height: 47,
     borderWidth: 1,
-    borderColor: '#000000',
+    borderColor: "#000",
     borderRadius: 7,
     fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
+    fontWeight: "600",
   },
-  verifyButton: {
-    width: '100%',
+  button: {
     height: 50,
-    backgroundColor: '#000000',
+    backgroundColor: "#000",
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 30,
   },
-  verifyButtonText: {
-    fontSize: 21.2389,
-    fontWeight: '300',
-    color: '#FFFFFF',
-  },
-  resendText: {
-    fontSize: 18.087,
-    fontWeight: '300',
-    color: '#000000',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  resendDisabled: {
-    color: '#999999',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { color: "#fff", fontSize: 20 },
+  resend: { textAlign: "center", fontSize: 18, color: "#000" },
+  resendDisabled: { color: "#888" },
 });
 
 export default OtpPage;
