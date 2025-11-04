@@ -9,7 +9,7 @@ export default function TabLayout() {
         tabBarStyle: { display: 'none' },
       }}
     >
-      <Tabs.Screen name="index" options={{ headerShown: false }} />
+      <Tabs.Screen name="home" options={{ headerShown: false }} />
       <Tabs.Screen name="orders" options={{ headerShown: false }} />
       <Tabs.Screen name="profile" options={{ headerShown: false }} />
     </Tabs>

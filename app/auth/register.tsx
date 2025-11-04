@@ -3,11 +3,11 @@ import registerUser from "@/hooks/useRegisterUser";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from "react-native";
 import Toast from 'react-native-toast-message';
 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 25.2,
     paddingHorizontal: 30,
-    paddingTop: 83,
+    paddingTop: "30%",
     paddingBottom: 40,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4.8 },

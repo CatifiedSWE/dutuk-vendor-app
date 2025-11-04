@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Dimensions,
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+  Dimensions,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import DutukLogo from './DutukLogo';
 
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     paddingHorizontal: 27,
-    paddingTop: 162,
+    paddingTop: "20%",
     paddingBottom: 40,
     shadowColor: '#000000',
     shadowOffset: {

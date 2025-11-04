@@ -10,7 +10,7 @@ const getCount = async(id: string) => {
             .single();
 
         if (companyError || !companyData?.company) {
-            console.error("Company lookup error:", companyError);
+            console.log("Company lookup error:", companyError);
             return 0;
         }
 
