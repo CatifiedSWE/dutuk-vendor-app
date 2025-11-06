@@ -7,10 +7,10 @@ const HistoryMenu = ()=>{
                <Text style={historyMenuStyles.headerText}>History and Highlights</Text> 
             </View>
             <View style={historyMenuStyles.optionsView}>
-            <RouteAssist path="/profile/profileSettings/history_and_highlights/pastEvents" text='Past Events'/>
-            <RouteAssist path="/profile/profileSettings/history_and_highlights/pastEarnings" text='Past Earnings'/>
-            <RouteAssist path="/profile/profileSettings/history_and_highlights/pastPayments" text='Past Payments'/>
-            <RouteAssist path="/profile/profileSettings/history_and_highlights/pastReviews" text='Past Reviews'/>
+            <RouteAssist path="/profilePages/profileSettings/history_and_highlights/pastEvents" text='Past Events'/>
+            <RouteAssist path="/profilePages/profileSettings/history_and_highlights/pastEarnings" text='Past Earnings'/>
+            <RouteAssist path="/profilePages/profileSettings/history_and_highlights/pastPayments" text='Past Payments'/>
+            <RouteAssist path="/profilePages/profileSettings/history_and_highlights/pastReviews" text='Past Reviews'/>
             </View>
         </View>
     )
