@@ -5,11 +5,25 @@ export default function OrdersLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        presentation: 'transparentModal',
+        animation: 'slide_from_bottom',
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="customerApproval" />
-      <Stack.Screen name="customerDetails" />
+      <Stack.Screen name="index" options={{ presentation: 'card' }} />
+      <Stack.Screen 
+        name="customerApproval" 
+        options={{ 
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }} 
+      />
+      <Stack.Screen 
+        name="customerDetails" 
+        options={{ 
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }} 
+      />
     </Stack>
   );
 }
