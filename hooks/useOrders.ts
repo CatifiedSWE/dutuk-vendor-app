@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/utils/supabase';
 
 export interface Order {
   id: string;
@@ -7,8 +8,10 @@ export interface Order {
   packageType: string;
   customerEmail: string;
   customerPhone: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
   date: string;
+  amount?: number;
+  notes?: string;
 }
 
 export const useOrders = () => {
@@ -19,8 +22,16 @@ export const useOrders = () => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+      
+      if (error) {
+        console.error('Failed to update order status:', error);
+        setLoading(false);
+        return false;
+      }
       
       // Update order status in local state
       setOrders(prevOrders => 
@@ -42,36 +53,49 @@ export const useOrders = () => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Get current user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      // Mock orders data
-      const mockOrders: Order[] = [
-        {
-          id: '1',
-          title: 'Wedding Photography',
-          customerName: 'John & Sarah',
-          packageType: 'Premium Package',
-          customerEmail: 'john.sarah@example.com',
-          customerPhone: '+1 (555) 123-4567',
-          status: 'pending',
-          date: 'October 26, 2025'
-        },
-        {
-          id: '2',
-          title: 'Corporate Event',
-          customerName: 'Tech Corp Inc.',
-          packageType: 'Business Package',
-          customerEmail: 'events@techcorp.com',
-          customerPhone: '+1 (555) 987-6543',
-          status: 'approved',
-          date: 'October 24, 2025'
-        }
-      ];
+      if (authError || !user) {
+        console.error('Authentication error:', authError);
+        setLoading(false);
+        return [];
+      }
       
-      setOrders(mockOrders);
+      // Fetch orders for this vendor
+      const { data: ordersData, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('vendor_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (fetchError) {
+        console.error('Failed to fetch orders:', fetchError);
+        setLoading(false);
+        return [];
+      }
+      
+      // Transform to match Order interface
+      const transformedOrders: Order[] = (ordersData || []).map(order => ({
+        id: order.id,
+        title: order.title,
+        customerName: order.customer_name,
+        packageType: order.package_type || 'Standard Package',
+        customerEmail: order.customer_email || '',
+        customerPhone: order.customer_phone || '',
+        status: order.status,
+        date: order.event_date ? new Date(order.event_date).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }) : 'Date TBD',
+        amount: order.amount,
+        notes: order.notes
+      }));
+      
+      setOrders(transformedOrders);
       setLoading(false);
-      return mockOrders;
+      return transformedOrders;
     } catch (error) {
       console.error('Failed to fetch orders:', error);
       setLoading(false);
