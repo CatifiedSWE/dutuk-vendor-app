@@ -16,9 +16,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 
+type Event = {
+  id: string;
+  event: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  payment: number;
+};
+
 const Home = () => {
   const [requests, setRequests] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [markedDates, setMarkedDates] = useState<any>({});
+  const [selectedDate, setSelectedDate] = useState('');
 
   const displayCount = async () => {
     try {
@@ -36,9 +48,34 @@ const Home = () => {
     }
   };
 
+  const loadEvents = async () => {
+    try {
+      const allEvents = await getAllEvents();
+      setEvents(allEvents);
+      
+      // Create marked dates object for calendar
+      const marked: any = {};
+      allEvents.forEach((event: Event) => {
+        const startDate = event.start_date?.split('T')[0];
+        const endDate = event.end_date?.split('T')[0];
+        
+        if (startDate) {
+          marked[startDate] = {
+            marked: true,
+            dotColor: event.status === 'upcoming' ? '#007AFF' : event.status === 'ongoing' ? '#FF9500' : '#34C759',
+          };
+        }
+      });
+      setMarkedDates(marked);
+    } catch (error) {
+      console.error('Failed to load events:', error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       displayCount();
+      loadEvents();
     }, [])
   );
 
