@@ -21,66 +21,82 @@ type PaymentsProp = {
 };
 
 const DisplayPayments = ({ payments }: PaymentsProp) => {
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
+
+    const formatDateTime = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return `${date.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        })} at ${date.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+        })}`;
+    };
+
     return (
         <ScrollView style={styles.container}>
             {payments.length === 0 ? (
                 <Text style={styles.noPaymentsText}>No past payments to display.</Text>
             ) : (
                 payments.map((payment, index) => {
-                    const displayDate = new Date(payment.paymentdate);
-
                     return (
-                        <View key={payment.paymentid || index} style={styles.card}>
-                            <Text style={styles.eventName}>{payment.associatedeventname}</Text>
+                        <View key={payment.id || index} style={styles.card}>
+                            <Text style={styles.eventName}>
+                                {payment.event_name || 'Payment'}
+                            </Text>
                             
                             <Text style={styles.detailText}>
-                                <Text style={styles.label}>Payer: </Text>
-                                {payment.payername}
+                                <Text style={styles.label}>Customer: </Text>
+                                {payment.customer_name || 'N/A'}
                             </Text>
 
                             <Text style={styles.detailText}>
                                 <Text style={styles.label}>Amount: </Text>
-                                <Text style={styles.amountText}>₹{payment.amountpaid.toFixed(2)}</Text>
+                                <Text style={styles.amountText}>₹{payment.amount.toFixed(2)}</Text>
                             </Text>
-
-                            {payment.vendornetreceipt !== undefined && (
-                                <Text style={styles.detailText}>
-                                    <Text style={styles.label}>Net Received: </Text>
-                                    <Text style={styles.netReceiptText}>₹{payment.vendornetreceipt.toFixed(2)}</Text>
-                                </Text>
-                            )}
 
                             <View style={styles.separator} />
 
-                            <Text style={styles.detailText}>
-                                <Text style={styles.label}>Type: </Text>
-                                {payment.paymenttype}
-                            </Text>
-
-                            <Text style={styles.detailText}>
-                                <Text style={styles.label}>Method: </Text>
-                                {payment.paymentmethod}
-                            </Text>
+                            {payment.payment_method && (
+                                <Text style={styles.detailText}>
+                                    <Text style={styles.label}>Method: </Text>
+                                    {payment.payment_method}
+                                </Text>
+                            )}
 
                             <Text style={styles.detailText}>
                                 <Text style={styles.label}>Status: </Text>
                                 <Text style={[
                                     styles.statusText,
-                                    payment.status === 'Successful' ? styles.statusSuccess : styles.statusOther
+                                    payment.payment_status === 'completed' ? styles.statusSuccess : styles.statusOther
                                 ]}>
-                                    {payment.status}
+                                    {payment.payment_status}
                                 </Text>
                             </Text>
 
+                            {payment.transaction_id && (
+                                <Text style={styles.detailText}>
+                                    <Text style={styles.label}>Transaction ID: </Text>
+                                    {payment.transaction_id}
+                                </Text>
+                            )}
+
                             <Text style={styles.paymentDate}>
-                                {`Paid on: ${displayDate.toLocaleDateString('en-IN', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                })} at ${displayDate.toLocaleTimeString('en-IN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                })}`}
+                                {payment.payment_date 
+                                    ? `Paid on: ${formatDate(payment.payment_date)}`
+                                    : `Created: ${formatDateTime(payment.created_at)}`
+                                }
                             </Text>
                         </View>
                     );
