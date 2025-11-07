@@ -354,4 +354,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666666",
+  },
+
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
 });
