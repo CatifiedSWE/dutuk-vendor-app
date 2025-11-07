@@ -1,5 +1,6 @@
 import getCount from "@/hooks/companyRequests/getRequestsCount";
 import getUser from "@/hooks/getUser";
+import getAllEvents from "@/hooks/getAllEvents";
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -9,9 +10,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
+  Dimensions
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Calendar } from 'react-native-calendars';
 
 const Home = () => {
   const [requests, setRequests] = useState<number | null>(null);
