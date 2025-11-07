@@ -186,7 +186,7 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
           text2: 'Your vendor account has been created successfully!'
         });
         
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/home');
       }
     }
   } catch (error) {
