@@ -17,77 +17,54 @@ type EarningsProp = {
 };
 
 const DisplayEarnings = ({ earnings }: EarningsProp) => {
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
+
     return (
         <ScrollView style={styles.container}>
             {earnings.length === 0 ? (
                 <Text style={styles.noEarningsText}>No past earnings to display.</Text>
             ) : (
                 earnings.map((earning, index) => {
-                    const displayDate = new Date(earning.eventdate);
-                    let statusColor = styles.statusUnpaid; 
-                    if (earning.paymentstatus === "Fully Paid") {
-                        statusColor = styles.statusFullyPaid;
-                    } else if (earning.paymentstatus === "Partially Paid") {
-                        statusColor = styles.statusPartiallyPaid;
-                    }
-
                     return (
-                        <View key={earning.associatedeventid || index} style={styles.card}>
-                            <Text style={styles.eventName}>{earning.associatedeventname}</Text>
-                            <Text style={styles.serviceText}>
-                                <Text style={styles.label}>Service: </Text>
-                                <Text>{earning.vendorservicesprovided}</Text>
+                        <View key={earning.id || index} style={styles.card}>
+                            <Text style={styles.eventName}>
+                                {earning.event_name || 'Unnamed Event'}
                             </Text>
 
-                            <View style={styles.amountRow}>
-                                <Text style={styles.detailText}>
-                                    <Text style={styles.label}>Gross: </Text>
-                                    <Text style={styles.grossAmount}>₹{earning.totalagreeduponprice.toFixed(2)}</Text>
-                                </Text>
-                                {earning.platformcommissionfees !== undefined && earning.platformcommissionfees > 0 && (
-                                    <Text style={styles.detailText}>
-                                        <Text style={styles.label}>Fee: </Text>
-                                        <Text style={styles.commissionText}>- ₹{earning.platformcommissionfees.toFixed(2)}</Text>
-                                    </Text>
-                                )}
-                            </View>
-
                             <View style={styles.netEarningsRow}>
-                                <Text style={styles.netEarningsLabel}>Net Earnings:</Text>
-                                <Text style={styles.netEarningsAmount}>₹{earning.netearningsforevent.toFixed(2)}</Text>
+                                <Text style={styles.netEarningsLabel}>Earnings:</Text>
+                                <Text style={styles.netEarningsAmount}>
+                                    ₹{earning.amount.toFixed(2)}
+                                </Text>
                             </View>
 
                             <View style={styles.separator} />
 
-                            <View style={styles.statusRow}>
-                                <Text style={styles.detailText}>
-                                    <Text style={styles.label}>Payment Status: </Text>
-                                    <Text style={[styles.statusText, statusColor]}>
-                                        {earning.paymentstatus}
-                                    </Text>
-                                </Text>
-                                {earning.outstandingbalance > 0 && (
-                                    <Text style={styles.detailText}>
-                                        <Text style={styles.label}>Due: </Text>
-                                        <Text style={styles.outstandingAmount}>₹{earning.outstandingbalance.toFixed(2)}</Text>
-                                    </Text>
-                                )}
-                            </View>
+                            <Text style={styles.detailText}>
+                                <Text style={styles.label}>Date: </Text>
+                                {formatDate(earning.earning_date)}
+                            </Text>
 
-                            {earning.invoicereference && (
-                                <Text style={styles.invoiceText}>
-                                    <Text style={styles.label}>Invoice: </Text>
-                                    <Text>{earning.invoicereference}</Text>
+                            {earning.notes && (
+                                <Text style={styles.detailText}>
+                                    <Text style={styles.label}>Notes: </Text>
+                                    {earning.notes}
                                 </Text>
                             )}
 
-                            <Text style={styles.eventDate}>
-                                {`Event Date: ${displayDate.toLocaleDateString('en-IN', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                })}`}
-                            </Text>
+                            {earning.event_id && (
+                                <Text style={styles.eventDate}>
+                                    Event ID: {earning.event_id.substring(0, 8)}...
+                                </Text>
+                            )}
                         </View>
                     );
                 })
