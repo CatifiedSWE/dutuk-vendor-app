@@ -99,15 +99,22 @@ const OrdersScreen = () => {
           </View>
         )}
         ListEmptyComponent={(
-          <View style={styles.emptyStateContainer}>
-            <View style={styles.emptyStatePlaceholder}>
-              <FileText width={60} height={60} stroke="#CCCCCC" />
-              <Text style={styles.emptyStateTitle}>No Orders Yet</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Your orders will appear here once customers start booking your services
-              </Text>
+          loading ? (
+            <View style={styles.emptyStateContainer}>
+              <ActivityIndicator size="large" color="#000000" />
+              <Text style={styles.loadingText}>Loading orders...</Text>
             </View>
-          </View>
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.emptyStatePlaceholder}>
+                <FileText width={60} height={60} stroke="#CCCCCC" />
+                <Text style={styles.emptyStateTitle}>No Orders Yet</Text>
+                <Text style={styles.emptyStateSubtitle}>
+                  Your orders will appear here once customers start booking your services
+                </Text>
+              </View>
+            </View>
+          )
         )}
         renderItem={({ item }) => {
           const goTo = item.status === 'pending' ? '/orders/customerApproval' : '/orders/customerDetails';
