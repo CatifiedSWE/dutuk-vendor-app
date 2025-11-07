@@ -19,16 +19,30 @@ type ReviewsProp = {
 };
 
 const DisplayReviews = ({ reviews }: ReviewsProp) => {
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    };
+
     return (
         <ScrollView style={styles.container}>
             {reviews.length === 0 ? (
                 <Text style={styles.noReviewsText}>No past reviews to display.</Text>
             ) : (
                 reviews.map((review, index) => (
-                    <View key={review.reviewid || index} style={styles.card}>
-                        <Text style={styles.eventName}>{review.associatedeventname}</Text>
+                    <View key={review.id || index} style={styles.card}>
+                        <Text style={styles.eventName}>
+                            {review.event_name || 'Event Review'}
+                        </Text>
 
-                        <Text style={styles.reviewerName}>Reviewed by: {review.reviewername}</Text>
+                        <Text style={styles.reviewerName}>
+                            Reviewed by: {review.customer_name}
+                        </Text>
 
                         <View style={styles.ratingContainer}>
                             <Text style={styles.ratingText}>{`Rating: ${review.rating}`}</Text>
@@ -39,11 +53,21 @@ const DisplayReviews = ({ reviews }: ReviewsProp) => {
 
                         <View style={styles.separator} />
 
-                        <Text style={styles.reviewTextHeader}>Review:</Text>
-                        <Text style={styles.reviewText}>{review.reviewtext}</Text>
+                        {review.review && (
+                            <>
+                                <Text style={styles.reviewTextHeader}>Review:</Text>
+                                <Text style={styles.reviewText}>{review.review}</Text>
+                            </>
+                        )}
+
+                        {review.event_date && (
+                            <Text style={styles.reviewDate}>
+                                Event Date: {formatDate(review.event_date)}
+                            </Text>
+                        )}
 
                         <Text style={styles.reviewDate}>
-                            {`Reviewed on: ${review.reviewdate}`}
+                            Reviewed on: {formatDate(review.created_at)}
                         </Text>
                     </View>
                 ))
