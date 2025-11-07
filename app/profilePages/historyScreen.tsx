@@ -1,4 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+
 import React from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -53,11 +55,11 @@ export default function HistoryScreen() {
 
       <View style={styles.footerRow}>
         <View style={styles.row}>
-          <Text>📅</Text>
+            <Ionicons name="calendar-outline" size={20} color="black" />
           <Text style={styles.footerText}>{item.date}</Text>
         </View>
         <View style={styles.row}>
-          <Text>⏰</Text>
+            <Ionicons name="time-outline" size={20} color="black" />
           <Text style={styles.footerText}>{item.time}</Text>
         </View>
       </View>
@@ -66,11 +68,23 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.backArrow}>←</Text>
-      </TouchableOpacity>
 
-      <Text style={styles.header}>History</Text>
+      <View style={styles.headerRow}>
+     
+     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+         <Ionicons name="chevron-back" size={24} color="black" />
+      </TouchableOpacity>
+        
+       <View style={styles.headerRow}>
+          <Text style={styles.header}>History</Text>
+        
+        </View> 
+       
+
+
+
+      </View>
+
 
       <FlatList
         data={DATA}
@@ -92,12 +106,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    elevation: 3,
+  
   },
   backArrow: {
     fontSize: 20,
@@ -147,4 +156,11 @@ const styles = StyleSheet.create({
   footerText: {
     color: "#444",
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+
+  },
+
 });
+

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -15,7 +16,11 @@ const EditProfileScreen = () => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <Ionicons name="chevron-back" size={26} style={styles.backIcon} />
+        
+        <Pressable onPress={() => router.back()} >  
+          <Ionicons name="chevron-back" size={26} style={styles.backIcon} /> 
+        </Pressable>
+        
         <Text style={styles.headerText}>Edit Profile</Text>
       </View>
 

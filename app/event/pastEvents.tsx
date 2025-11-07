@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
+
 
 interface HistoryItem {
   id: string;
@@ -52,11 +54,12 @@ export default function PastEvents() {
 
       <View style={styles.footerRow}>
         <View style={styles.row}>
-          <Text>📅</Text>
+                      <Ionicons name="calendar-outline" size={20} color="black" />
+
           <Text style={styles.footerText}>{item.date}</Text>
         </View>
         <View style={styles.row}>
-          <Text>⏰</Text>
+                      <Ionicons name="time-outline" size={20} color="black" />
           <Text style={styles.footerText}>{item.time}</Text>
         </View>
       </View>

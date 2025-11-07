@@ -1,5 +1,7 @@
 import upcomingEvents from "@/dummy_data/upcomingEvents";
+import { Ionicons } from '@expo/vector-icons';
 import { FlatList, StyleSheet, Text, View } from "react-native";
+
 
 const UpcomingEvents = () => {
   return (
@@ -14,18 +16,16 @@ const UpcomingEvents = () => {
 
             <View style={styles.footerRow}>
               <View style={styles.row}>
-                <Text>📅</Text>
-                <Text style={styles.footerText}>{item.from}</Text>
+                  <Ionicons name="calendar-outline" size={20} color="black" />
+                <Text style={styles.footerText}>{item.from}</Text><Text>-</Text><Text style={styles.footerText}>{item.to}</Text>
               </View>
-              <View style={styles.row}>
-                <Text>➡️</Text>
-                
-                <Text style={styles.footerText}>{item.to}</Text>
-              </View>
+   
+              
+
             </View>
 
-            <Text style={styles.info}>💰 Estimated Cost: ₹{item.cost}</Text>
-            <Text style={styles.info}>🔮 Expectations: {item.expectation}</Text>
+            <Text style={styles.info}><Ionicons name="cash-outline" size={20} color="black" /> Estimated Cost: ₹{item.cost}</Text>
+            <Text style={styles.info}><Ionicons name="person-outline" size={20} color="black" /> Expectations: {item.expectation}</Text>
           </View>
         )}
       />

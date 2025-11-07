@@ -3,11 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import React from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from 'react-native-toast-message';
@@ -35,11 +35,7 @@ const ProfileScreen = () => {
       title: 'Chat Support',
       onPress: () => router.push('/profilePages/chatSupport')
     },
-    {
-      icon: 'help-circle-outline',
-      title: 'Help Center',
-      onPress: () => router.push('/profilePages/profileSettings/helpcenter')
-    }
+
   ];
 
   const handleLogout = async () => {

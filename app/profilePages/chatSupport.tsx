@@ -13,7 +13,7 @@ const ChatSupportScreen = () => {
         </Pressable>
 
         <View style={styles.titleRow}>
-          <Ionicons name="chatbubbles-outline" size={22} color="black" />
+      
           <Text style={styles.headerText}>Chat Support</Text>
         </View>
       </View>
@@ -73,6 +73,7 @@ const styles = StyleSheet.create({
     color: "#333",
     marginTop: 20,
     marginBottom: 10,
+    textAlign: "center"
   },
 
   subText: {

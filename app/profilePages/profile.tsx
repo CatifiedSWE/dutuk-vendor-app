@@ -33,14 +33,10 @@ const ProfileScreen = () => {
     },
     {
       icon: 'chatbubbles-outline',
-      title: 'Chat Support',
+      title: 'Chat  ',
       onPress: () => router.push('/profilePages/chatSupport')
     },
-    {
-      icon: 'help-circle-outline',
-      title: 'Help Center',
-      onPress: () => router.push('/profilePages/profileSettings/helpcenter')
-    }
+
   ];
 
   const handleLogout = async () => {

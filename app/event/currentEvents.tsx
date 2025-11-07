@@ -1,4 +1,6 @@
 import currentEvents from "@/dummy_data/currentEvents";
+import { Ionicons } from '@expo/vector-icons';
+
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
 const CurrentEvents = () => {
@@ -10,8 +12,8 @@ const CurrentEvents = () => {
         renderItem={({item} ) => (
           <View style={styles.card}>
             <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.text}>📅 {item.from} → {item.to}</Text>
-            <Text style={styles.text}>💰 Total Cost: ₹{item.cost}</Text>
+            <Text style={styles.text}><Ionicons name="calendar-outline" size={20} color="black" /> {item.from} → {item.to}</Text>
+            <Text style={styles.text}><Ionicons name="cash-outline" size={20} color="black" />  Total Cost: ₹{item.cost}</Text>
             <Text style={styles.text}>🟢 Status: {item.status}</Text>
           </View>
         )}

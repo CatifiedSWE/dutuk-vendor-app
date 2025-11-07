@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,32 +41,35 @@ const Home = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcons}>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={32} color="#000000" />
-          </Pressable>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="calendar-outline" size={31} color="#000000" />
-          </Pressable>
-          <View style={styles.profileIcon}>
-            <View style={styles.profileImagePlaceholder} />
-          </View>
-        </View>
-        
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Home</Text>
-          <Ionicons name="home" size={37} color="#000000" style={styles.titleIcon} />
-        </View>
-      </View>
-
-      {/* Content */}
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <View style={styles.headerIcons}>
+            {/* Left group */}
+            <View style={styles.leftIcons}>
+              <Pressable style={styles.iconButton}>
+                <Ionicons name="notifications-outline" size={28} color="#000000" />
+              </Pressable>
+              <Pressable style={styles.iconButton}  onPress={() => router.push("/profilePages/calender/CalendarPage")}>
+                <Ionicons name="calendar-outline" size={28} color="#000000" />
+              </Pressable>
+            </View>
+
+            {/* Right group */}
+            <Pressable style={styles.profileIcon}  onPress={() => router.push("/profilePages/editProfile")}>
+              <View style={styles.profileImagePlaceholder} />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Home</Text>
+          <Ionicons name="home" size={37} color="#000000" style={styles.titleIcon} />
+        </View>
+
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <Pressable 
@@ -146,6 +149,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
+  leftIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    marginLeft: -30,
+  },
   iconButton: {
     width: 44,
     height: 44,
@@ -153,12 +162,21 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   profileIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
+    backgroundColor: '#FEFEFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -10
   },
   profileImagePlaceholder: {
     width: '100%',
@@ -168,6 +186,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 26,
