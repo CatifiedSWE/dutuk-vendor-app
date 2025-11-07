@@ -1,18 +1,18 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type FlatEventProp = {
-    id: number;
-    user_id: string;
-    eventnametype: string;
-    startdate: string;
-    enddate: string;
-    starttime: string;
-    endtime: string;
-    venuename?: string | null;
-    fulladdress: string;
-    customername: string;
-    customeremail: string;
-    customerphonenumber: string;
+    id: string;
+    vendor_id: string;
+    customer_id: string;
+    event: string;
+    description?: string;
+    start_date: string;
+    end_date: string;
+    customer_name?: string;
+    company_name: string;
+    payment: number;
+    status: string;
+    created_at: string;
 };
 
 type EventsProp = {
