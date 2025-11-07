@@ -110,25 +110,123 @@ const Home = () => {
           <Ionicons name="home" size={37} color="#000000" style={styles.titleIcon} />
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Pressable 
-            style={styles.actionCard}
-            onPress={() => router.push("/profilePages/calender/CalendarPage")}
-          >
-            <Ionicons name="calendar-outline" size={40} color="#007AFF" />
-            <Text style={styles.actionTitle}>Calendar</Text>
-            <Text style={styles.actionSubtitle}>Manage your schedule</Text>
-          </Pressable>
+        {/* Calendar Section */}
+        <View style={styles.calendarSection}>
+          <Calendar
+            markedDates={markedDates}
+            onDayPress={(day) => {
+              setSelectedDate(day.dateString);
+            }}
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#000000',
+              selectedDayBackgroundColor: '#007AFF',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#007AFF',
+              dayTextColor: '#000000',
+              textDisabledColor: '#d9e1e8',
+              dotColor: '#007AFF',
+              selectedDotColor: '#ffffff',
+              arrowColor: '#007AFF',
+              monthTextColor: '#000000',
+              textDayFontWeight: '400',
+              textMonthFontWeight: '600',
+              textDayHeaderFontWeight: '500',
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 12
+            }}
+            style={styles.calendar}
+          />
+        </View>
 
-          <Pressable 
-            style={styles.actionCard}
-            onPress={() => router.push("/event")}
+        {/* Events Section */}
+        <View style={styles.eventsSection}>
+          <View style={styles.eventsSectionHeader}>
+            <Text style={styles.sectionTitle}>Events</Text>
+            <Pressable 
+              style={styles.addMoreButton}
+              onPress={() => router.push("/event")}
+            >
+              <Text style={styles.addMoreText}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color="#007AFF" />
+            </Pressable>
+          </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.eventsScrollContent}
           >
-            <Ionicons name="star-outline" size={40} color="#FF9500" />
-            <Text style={styles.actionTitle}>Events</Text>
-            <Text style={styles.actionSubtitle}>View all events</Text>
-          </Pressable>
+            {/* Upcoming Events Card */}
+            <Pressable 
+              style={styles.eventCard}
+              onPress={() => router.push("/event/upcomingEvents")}
+            >
+              <View style={[styles.eventIconContainer, { backgroundColor: '#007AFF20' }]}>
+                <Ionicons name="calendar-outline" size={32} color="#007AFF" />
+              </View>
+              <Text style={styles.eventCardTitle}>Upcoming Events</Text>
+              <Text style={styles.eventCardCount}>
+                {events.filter(e => e.status === 'upcoming').length} events
+              </Text>
+              <Text style={styles.eventCardDescription}>
+                Plan and prepare for your scheduled events
+              </Text>
+            </Pressable>
+
+            {/* Ongoing Events Card */}
+            <Pressable 
+              style={styles.eventCard}
+              onPress={() => router.push("/event/currentEvents")}
+            >
+              <View style={[styles.eventIconContainer, { backgroundColor: '#FF950020' }]}>
+                <Ionicons name="time-outline" size={32} color="#FF9500" />
+              </View>
+              <Text style={styles.eventCardTitle}>Ongoing Events</Text>
+              <Text style={styles.eventCardCount}>
+                {events.filter(e => e.status === 'ongoing').length} events
+              </Text>
+              <Text style={styles.eventCardDescription}>
+                Events currently in progress
+              </Text>
+            </Pressable>
+
+            {/* Completed Events Card */}
+            <Pressable 
+              style={styles.eventCard}
+              onPress={() => router.push("/profilePages/profileSettings/history_and_highlights/pastEvents")}
+            >
+              <View style={[styles.eventIconContainer, { backgroundColor: '#34C75920' }]}>
+                <Ionicons name="checkmark-circle-outline" size={32} color="#34C759" />
+              </View>
+              <Text style={styles.eventCardTitle}>Completed</Text>
+              <Text style={styles.eventCardCount}>
+                {events.filter(e => e.status === 'completed').length} events
+              </Text>
+              <Text style={styles.eventCardDescription}>
+                Successfully completed events
+              </Text>
+            </Pressable>
+
+            {/* All Events Card */}
+            <Pressable 
+              style={styles.eventCard}
+              onPress={() => router.push("/event")}
+            >
+              <View style={[styles.eventIconContainer, { backgroundColor: '#8E8E9320' }]}>
+                <Ionicons name="grid-outline" size={32} color="#8E8E93" />
+              </View>
+              <Text style={styles.eventCardTitle}>All Events</Text>
+              <Text style={styles.eventCardCount}>
+                {events.length} total
+              </Text>
+              <Text style={styles.eventCardDescription}>
+                View complete event history
+              </Text>
+            </Pressable>
+          </ScrollView>
         </View>
 
         {/* Requests Section */}
