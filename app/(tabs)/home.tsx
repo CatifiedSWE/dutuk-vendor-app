@@ -1,20 +1,21 @@
+import placeholderImage from "@/assets/avatar.png";
 import getCount from "@/hooks/companyRequests/getRequestsCount";
-import getUser from "@/hooks/getUser";
 import getAllEvents from "@/hooks/getAllEvents";
+import getUser from "@/hooks/getUser";
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  Dimensions
+  View
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Event = {
   id: string;
@@ -23,6 +24,9 @@ type Event = {
   end_date: string;
   status: string;
   payment: number;
+  description?: string | null;
+  image_url?: string | null;
+  banner_url?: string | null;
 };
 
 const Home = () => {
@@ -31,6 +35,10 @@ const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [markedDates, setMarkedDates] = useState<any>({});
   const [selectedDate, setSelectedDate] = useState('');
+
+  const manageableEvents = useMemo(() => {
+    return events.filter((evt) => evt.status !== 'completed');
+  }, [events]);
 
   const displayCount = async () => {
     try {
@@ -139,6 +147,81 @@ const Home = () => {
             }}
             style={styles.calendar}
           />
+        </View>
+
+        {/* Manage Events Section */}
+        <View style={styles.manageSection}>
+          <View style={styles.manageHeader}>
+            <Text style={styles.sectionTitle}>Manage Events</Text>
+            <Pressable
+              style={styles.createButton}
+              onPress={() => router.push("/event/manage/create")}
+            >
+              <Ionicons name="add" size={18} color="#FFFFFF" />
+              <Text style={styles.createButtonText}>New Event</Text>
+            </Pressable>
+          </View>
+
+          {manageableEvents.length === 0 ? (
+            <Pressable
+              style={styles.emptyManageCard}
+              onPress={() => router.push("/event/manage/create")}
+            >
+              <Ionicons name="calendar-outline" size={36} color="#007AFF" />
+              <Text style={styles.emptyManageTitle}>Create your event</Text>
+              <Text style={styles.emptyManageSubtitle}>
+                Start building your first event to showcase it to customers.
+              </Text>
+            </Pressable>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.manageScrollContent}
+            >
+              {manageableEvents.map((item) => {
+                const imageUri = item.image_url || item.banner_url || "";
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={styles.manageCard}
+                    onPress={() => router.push(`/event/manage/${item.id}`)}
+                  >
+                    <Image
+                      source={imageUri ? { uri: imageUri } : placeholderImage}
+                      style={styles.manageCardImage}
+                    />
+                    <View style={styles.manageCardContent}>
+                      <Text style={styles.manageCardTitle}>{item.event}</Text>
+                      {item.description ? (
+                        <Text style={styles.manageCardDescription} numberOfLines={2}>
+                          {item.description}
+                        </Text>
+                      ) : (
+                        <Text style={styles.manageCardDescriptionMuted}>No description yet</Text>
+                      )}
+                      <View style={styles.manageCardFooter}>
+                        <View style={styles.manageStatusBadge}>
+                          <Text style={styles.manageStatusText}>{item.status}</Text>
+                        </View>
+                        <Text style={styles.managePaymentText}>₹{item.payment?.toFixed(2) ?? "0.00"}</Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+
+              <Pressable
+                style={[styles.manageCard, styles.manageAddMoreCard]}
+                onPress={() => router.push("/event/manage/create")}
+              >
+                <View style={styles.manageAddIconWrapper}>
+                  <Ionicons name="add-circle-outline" size={40} color="#007AFF" />
+                </View>
+                <Text style={styles.manageAddMoreText}>Add another event</Text>
+              </Pressable>
+            </ScrollView>
+          )}
         </View>
 
         {/* Events Section */}
@@ -368,6 +451,129 @@ const styles = StyleSheet.create({
   },
   eventsSection: {
     marginBottom: 30,
+  },
+  manageSection: {
+    marginBottom: 30,
+  },
+  manageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  emptyManageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  emptyManageTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  emptyManageSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#6b6b6b',
+    textAlign: 'center',
+  },
+  manageScrollContent: {
+    paddingRight: 28,
+  },
+  manageCard: {
+    width: 260,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginRight: 16,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  manageCardImage: {
+    width: '100%',
+    height: 140,
+    resizeMode: 'cover',
+  },
+  manageCardContent: {
+    padding: 16,
+    gap: 8,
+  },
+  manageCardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  manageCardDescription: {
+    fontSize: 13,
+    color: '#4A4A4A',
+  },
+  manageCardDescriptionMuted: {
+    fontSize: 13,
+    color: '#9A9A9A',
+  },
+  manageCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  manageStatusBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  manageStatusText: {
+    fontSize: 12,
+    textTransform: 'capitalize',
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  managePaymentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111111',
+  },
+  manageAddMoreCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  manageAddIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  manageAddMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    textAlign: 'center',
   },
   eventsSectionHeader: {
     flexDirection: 'row',

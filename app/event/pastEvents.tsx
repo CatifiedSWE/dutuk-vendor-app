@@ -1,85 +1,116 @@
+import getPastEvents from "@/hooks/getPastEvents";
 import { Ionicons } from '@expo/vector-icons';
-import React from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
-
-interface HistoryItem {
+type PastEvent = {
   id: string;
-  title: string;
-  name: string;
-  date: string;
-  time: string;
-  rating: number;
-}
+  event: string;
+  customer_name?: string;
+  start_date: string;
+  end_date: string;
+  payment?: number;
+  status?: string;
+};
 
-const DATA: HistoryItem[] = [
-  {
-    id: "#55D90",
-    title: "Birthday Party",
-    name: "Praveen Kumar",
-    date: "13-10-2025",
-    time: "7:00am - 4pm",
-    rating: 4.5,
-  },
-  {
-    id: "#52D90",
-    title: "Marriage Function",
-    name: "Mohan Raj",
-    date: "13-10-2025",
-    time: "7:00am - 4pm",
-    rating: 4.5,
-  },
-  {
-    id: "#52D90-1",
-    title: "Birthday Party",
-    name: "Mark Antony",
-    date: "13-10-2025",
-    time: "7:00am - 4pm",
-    rating: 4.0,
-  },
-];
+const PastEvents = () => {
+  const [events, setEvents] = useState<PastEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function PastEvents() {
- 
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getPastEvents();
+      setEvents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const renderItem = ({ item }: { item: HistoryItem }) => (
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents])
+  );
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatDateRange = (start: string, end: string) => {
+    const startLabel = formatDate(start);
+    const endLabel = formatDate(end);
+    if (!start || !end || startLabel === endLabel) {
+      return startLabel;
+    }
+    return `${startLabel} → ${endLabel}`;
+  };
+
+  const formatCurrency = (value?: number) => {
+    if (typeof value !== "number") return "No payment info";
+    return `₹${value.toFixed(2)}`;
+  };
+
+  const renderItem = ({ item }: { item: PastEvent }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardId}>{item.id}</Text>
-        <Text style={styles.rating}>★ {item.rating}</Text>
+        {item.status && <Text style={styles.status}>{item.status}</Text>}
       </View>
 
-      <Text style={styles.cardTitle}>{item.title}</Text>
-      <Text style={styles.cardName}>{item.name}</Text>
+      <Text style={styles.cardTitle}>{item.event || "Untitled Event"}</Text>
+      <Text style={styles.cardName}>{item.customer_name || "Unknown customer"}</Text>
 
       <View style={styles.footerRow}>
         <View style={styles.row}>
-                      <Ionicons name="calendar-outline" size={20} color="black" />
-
-          <Text style={styles.footerText}>{item.date}</Text>
+          <Ionicons name="calendar-outline" size={20} color="black" />
+          <Text style={styles.footerText}>{formatDateRange(item.start_date, item.end_date)}</Text>
         </View>
         <View style={styles.row}>
-                      <Ionicons name="time-outline" size={20} color="black" />
-          <Text style={styles.footerText}>{item.time}</Text>
+          <Ionicons name="cash-outline" size={20} color="black" />
+          <Text style={styles.footerText}>{formatCurrency(item.payment)}</Text>
         </View>
       </View>
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={styles.loadingText}>Loading past events...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-  
-
-
       <FlatList
-        data={DATA}
+        data={events}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No past events</Text>
+          </View>
+        }
       />
     </View>
   );
-}
+};
+
+export default PastEvents;
 
 const styles = StyleSheet.create({
   container: {
@@ -87,6 +118,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f3f3",
     padding: 16,
     paddingTop: 40,
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
   },
   backButton: {
     width: 40,
@@ -121,9 +161,10 @@ const styles = StyleSheet.create({
   cardId: {
     color: "gray",
   },
-  rating: {
-    color: "red",
+  status: {
+    color: "#007AFF",
     fontWeight: "600",
+    textTransform: "capitalize",
   },
   cardTitle: {
     fontSize: 18,
@@ -146,4 +187,15 @@ const styles = StyleSheet.create({
   footerText: {
     color: "#444",
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
+  },
 });
+

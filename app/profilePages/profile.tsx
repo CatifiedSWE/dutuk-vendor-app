@@ -1,8 +1,11 @@
+import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,13 @@ import BottomNavigation from '../../components/BottomNavigation';
 
 const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+  const [companyData, setCompanyData] = useState({
+    name: "",
+    description: "",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png"
+  });
+
   const menuItems = [
     {
       icon: 'person-outline',
@@ -33,11 +43,38 @@ const ProfileScreen = () => {
     },
     {
       icon: 'chatbubbles-outline',
-      title: 'Chat  ',
+      title: 'Chat',
       onPress: () => router.push('/profilePages/chatSupport')
     },
-
   ];
+
+  useEffect(() => {
+    loadCompanyInfo();
+  }, []);
+
+  const loadCompanyInfo = async () => {
+    try {
+      setLoading(true);
+      const data = await getCompanyInfo();
+
+      if (data) {
+        setCompanyData({
+          name: data.company?.trim() || "",
+          description: data.description?.trim() || "",
+          logoUrl: data.logo_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load company info:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load company information.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -65,14 +102,24 @@ const ProfileScreen = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text style={{ marginTop: 10, color: '#555' }}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 120 + insets.bottom } // Account for bottom nav (80px) + safe area + extra space
+          { paddingBottom: 120 + insets.bottom }
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -101,14 +148,19 @@ const ProfileScreen = () => {
               text2: 'Profile image upload will be available soon'
             });
           }}>
-            <View style={styles.profileImagePlaceholder}>
-              <Ionicons name="person-outline" size={40} color="#CCCCCC" />
-            </View>
+            <Image
+              source={{ uri: companyData.logoUrl }}
+              style={styles.profileImagePlaceholder}
+            />
           </Pressable>
 
           {/* Company Info */}
-          <Text style={styles.companyName}>Your Company Name</Text>
-          <Text style={styles.companyTagline}>Add your company tagline here</Text>
+          <Text style={styles.companyName}>
+            {companyData.name || "No name"}
+          </Text>
+          <Text style={styles.companyTagline}>
+            {companyData.description || "No description"}
+          </Text>
         </View>
 
         {/* Menu Items */}
@@ -123,7 +175,7 @@ const ProfileScreen = () => {
             </Pressable>
           ))}
 
-          {/* Logout Item */}
+          {/* Logout */}
           <Pressable style={styles.menuItem} onPress={handleLogout}>
             <View style={styles.menuItemLeft}>
               <Ionicons name="log-out-outline" size={21} color="#FF3030" />
@@ -135,7 +187,7 @@ const ProfileScreen = () => {
         </>
       </ScrollView>
 
-      {/* Bottom Navigation - Fixed */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNavContainer}>
         <BottomNavigation activeTab="profile" />
       </View>
@@ -152,7 +204,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120, // Extra padding to allow scrolling past bottom navigation (80px nav + 40px extra)
+    paddingBottom: 120,
   },
   bottomNavContainer: {
     backgroundColor: '#F3F3F3',
@@ -197,8 +249,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F8F9FA',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   companyName: {
     fontSize: 26.3272,
@@ -235,7 +285,6 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginLeft: 28,
   },
-
 });
 
 export default ProfileScreen;
