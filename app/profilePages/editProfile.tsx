@@ -118,11 +118,11 @@ const EditProfileScreen = () => {
 
       {/* Profile Row */}
       <View style={styles.avatarRow}>
-        <Image source={{ uri: avatar }} style={styles.avatar} />
+        <Image source={{ uri: companyData.logoUrl }} style={styles.avatar} />
 
         <View style={styles.profileInfo}>
-          <Text style={styles.companyName}>{name}</Text>
-          <Text style={styles.tagline}>{tagline}</Text>
+          <Text style={styles.companyName}>{companyData.name || "Company Name"}</Text>
+          <Text style={styles.tagline}>{companyData.mail || "No email set"}</Text>
 
           <View style={styles.buttonRow}>
             <Pressable style={styles.primaryBtn}>
@@ -139,20 +139,68 @@ const EditProfileScreen = () => {
       <Text style={styles.sectionTitle}>Basic Info</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Name</Text>
-        <TextInput style={styles.input} value={name} />
+        <Text style={styles.label}>Company Name *</Text>
+        <TextInput 
+          style={styles.input} 
+          value={companyData.name}
+          onChangeText={(text) => setCompanyData({...companyData, name: text})}
+          placeholder="Enter company name"
+        />
+
+        <Text style={styles.label}>Email</Text>
+        <TextInput 
+          style={styles.input} 
+          value={companyData.mail}
+          onChangeText={(text) => setCompanyData({...companyData, mail: text})}
+          placeholder="company@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
         <Text style={styles.label}>Description</Text>
-        <TextInput style={styles.textarea} value={description} multiline />
+        <TextInput 
+          style={styles.textarea} 
+          value={companyData.description}
+          onChangeText={(text) => setCompanyData({...companyData, description: text})}
+          placeholder="Tell customers about your company..."
+          multiline 
+        />
 
         <Text style={styles.label}>Address</Text>
-        <TextInput style={styles.input} value={address} />
+        <TextInput 
+          style={styles.input} 
+          value={companyData.address}
+          onChangeText={(text) => setCompanyData({...companyData, address: text})}
+          placeholder="Company address"
+        />
 
-        <Text style={styles.label}>Phone number</Text>
-        <TextInput style={styles.input} value={phone} />
+        <Text style={styles.label}>Phone Number</Text>
+        <TextInput 
+          style={styles.input} 
+          value={companyData.phone}
+          onChangeText={(text) => setCompanyData({...companyData, phone: text})}
+          placeholder="+1 (555) 000-0000"
+          keyboardType="phone-pad"
+        />
 
-        <Pressable style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <Text style={styles.label}>Website</Text>
+        <TextInput 
+          style={styles.input} 
+          value={companyData.website}
+          onChangeText={(text) => setCompanyData({...companyData, website: text})}
+          placeholder="https://yourwebsite.com"
+          keyboardType="url"
+          autoCapitalize="none"
+        />
+
+        <Pressable 
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? "Saving..." : "Save"}
+          </Text>
         </Pressable>
       </View>
     </ScrollView>
