@@ -106,7 +106,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f3f3",
     padding: 16,
   },
-
+  centerContent: { 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  loadingText: { 
+    marginTop: 10, 
+    fontSize: 16, 
+    color: "#666" 
+  },
   card: {
     backgroundColor: "white",
     padding: 16,
@@ -122,9 +130,9 @@ const styles = StyleSheet.create({
   },
 
   footerRow: {
-    flexDirection: "column",      // ⬅️ stack vertically
-    alignItems: "flex-start",     // ⬅️ left-aligned like bulletin notes
-    gap: 6,                        // ⬅️ small spacing between items
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 6,
     marginBottom: 10,
   },
 
@@ -141,6 +149,16 @@ const styles = StyleSheet.create({
   info: {
     marginTop: 6,
     color: "#333",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
   },
 });
 
