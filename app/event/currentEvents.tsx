@@ -1,20 +1,84 @@
-import currentEvents from "@/dummy_data/currentEvents";
+import getCurrentEvents from "@/hooks/getCurrentEvents";
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
-import { FlatList, StyleSheet, Text, View } from "react-native";
+type Event = {
+  id: string;
+  event: string;
+  start_date: string;
+  end_date: string;
+  payment: number;
+  status: string;
+  customer_name?: string;
+  company_name: string;
+};
 
 const CurrentEvents = () => {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    const data = await getCurrentEvents();
+    setEvents(data);
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents])
+  );
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading current events...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={currentEvents}
+        data={events}
         keyExtractor={(item) => item.id}
-        renderItem={({item} ) => (
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No ongoing events</Text>
+          </View>
+        }
+        renderItem={({item}) => (
           <View style={styles.card}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.text}><Ionicons name="calendar-outline" size={20} color="black" /> {item.from} → {item.to}</Text>
-            <Text style={styles.text}><Ionicons name="cash-outline" size={20} color="black" />  Total Cost: ₹{item.cost}</Text>
+            <Text style={styles.title}>{item.event}</Text>
+            <Text style={styles.text}>
+              <Ionicons name="calendar-outline" size={20} color="black" /> 
+              {' '}{formatDate(item.start_date)} → {formatDate(item.end_date)}
+            </Text>
+            <Text style={styles.text}>
+              <Ionicons name="cash-outline" size={20} color="black" />
+              {' '}Total Cost: ₹{item.payment.toFixed(2)}
+            </Text>
             <Text style={styles.text}>🟢 Status: {item.status}</Text>
+            {item.customer_name && (
+              <Text style={styles.text}>
+                <Ionicons name="person-outline" size={20} color="black" />
+                {' '}{item.customer_name}
+              </Text>
+            )}
           </View>
         )}
       />
