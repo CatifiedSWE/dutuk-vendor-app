@@ -88,6 +88,8 @@ const OrdersScreen = () => {
         keyExtractor={(item, index) => `${item.id}-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListHeaderComponent={(
           <View style={styles.titleContainer}>
             <View style={styles.titleRow}>
