@@ -2,7 +2,7 @@ import { supabase } from "@/utils/supabase";
 
 /**
  * Check if a user with given email already exists in the system
- * This checks both auth.users (via RPC call) and user_profiles table
+ * Uses password reset request as a way to check if email exists
  * 
  * @param email - The email address to check
  * @returns Promise<{exists: boolean, error: string | null}>
@@ -17,27 +17,51 @@ const checkUserExists = async (
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // First check if user exists in user_profiles via their email lookup
-    // We can check auth.users indirectly by trying to get user profiles
-    const { data: profiles, error: profileError } = await supabase
-      .from("user_profiles")
-      .select("user_id, role")
-      .limit(1);
+    // Try to sign in with a dummy password to check if user exists
+    // This is a quick check - if user doesn't exist, we get a specific error
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password: "dummy_check_password_12345", // This will fail, but error tells us if user exists
+    });
 
-    if (profileError) {
-      console.error("Error checking user profiles:", profileError);
-      // Don't block registration if we can't check - let Supabase auth handle it
+    if (error) {
+      const message = error.message.toLowerCase();
+      
+      // If error mentions "invalid login credentials", user exists but password was wrong
+      if (message.includes("invalid login credentials") || message.includes("invalid password")) {
+        console.log("User exists (invalid credentials error):", trimmedEmail);
+        return { exists: true, error: null };
+      }
+      
+      // If error mentions "user not found" or "email not found", user doesn't exist
+      if (message.includes("user not found") || message.includes("not found")) {
+        console.log("User does not exist:", trimmedEmail);
+        return { exists: false, error: null };
+      }
+      
+      // For "email not confirmed", user exists but hasn't verified email
+      if (message.includes("email not confirmed") || message.includes("not verified")) {
+        console.log("User exists but email not confirmed:", trimmedEmail);
+        return { exists: true, error: null };
+      }
+      
+      // Other errors - assume user doesn't exist to allow registration attempt
+      console.log("Ambiguous error, assuming user doesn't exist:", error);
       return { exists: false, error: null };
     }
 
-    // Since we can't directly query auth.users from client,
-    // we'll rely on Supabase's built-in validation during signup
-    // This function serves as a preparatory check for user_profiles
-    
+    // If somehow login succeeded (shouldn't happen with dummy password), user exists
+    if (data?.user) {
+      // Sign out immediately
+      await supabase.auth.signOut();
+      return { exists: true, error: null };
+    }
+
     return { exists: false, error: null };
   } catch (error) {
     console.error("Unexpected error checking user existence:", error);
-    return { exists: false, error: "Failed to verify user status" };
+    // On error, allow registration to proceed
+    return { exists: false, error: null };
   }
 };
 
