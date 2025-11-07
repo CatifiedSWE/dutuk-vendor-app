@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Pressable,
     ScrollView,
@@ -10,35 +11,37 @@ import {
 } from 'react-native';
 import { Bell, Calendar, Clock, Edit, FileText, User } from 'react-native-feather';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useOrders } from '@/hooks/useOrders';
+import Toast from 'react-native-toast-message';
 
 const OrdersScreen = () => {
   const insets = useSafeAreaInsets();
-  const [orders] = useState([
-    {
-      id: '55D90',
-      title: 'Birthday Party',
-      customerName: 'Bodhi Dharmar',
-      status: 'pending',
-      date: '15-10-2025',
-      time: '7:00am - 4pm'
-    },
-    {
-      id: '55D90',
-      title: 'Birthday Party', 
-      customerName: 'Praveen Kumar',
-      status: 'approved',
-      date: '13-10-2025',
-      time: '7:00am - 4pm'
-    },
-    {
-      id: '55D90',
-      title: 'Marriage Function',
-      customerName: 'Mohan Raj', 
-      status: 'done',
-      date: '11-10-2025',
-      time: '7:00am - 4pm'
+  const { orders, loading, getOrders } = useOrders();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch orders when component mounts
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      await getOrders();
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load orders. Please try again.'
+      });
     }
-  ]);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadOrders();
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
