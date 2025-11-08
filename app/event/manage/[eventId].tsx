@@ -186,6 +186,49 @@ const ManageEventScreen = () => {
     }
   };
 
+  const handleRemoveImage = async () => {
+    if (!eventImageUrl || !eventId) return;
+
+    Alert.alert(
+      "Remove Image",
+      "Are you sure you want to remove this image? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Delete from storage
+              console.log("Removing image from storage:", eventImageUrl);
+              await deleteImage(eventImageUrl);
+              
+              // Update database to remove image URL
+              await updateEvent(eventId, { image_url: null });
+              
+              setEventImageUrl(null);
+              Toast.show({
+                type: 'success',
+                text1: 'Image Removed',
+                text2: 'Event image has been removed.'
+              });
+            } catch (error) {
+              console.error("Error removing image:", error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to remove image.'
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSave = async () => {
     if (!eventId) {
       return;
