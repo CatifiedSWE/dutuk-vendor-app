@@ -122,7 +122,10 @@ const Home = () => {
 
             {/* Right group */}
             <Pressable style={styles.profileIcon}  onPress={() => router.push("/profilePages/editProfile")}>
-              <View style={styles.profileImagePlaceholder} />
+              <Image 
+                source={{ uri: profileImageUrl }} 
+                style={styles.profileImage}
+              />
             </Pressable>
           </View>
         </View>
