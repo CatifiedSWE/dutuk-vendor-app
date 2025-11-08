@@ -259,14 +259,28 @@ const ManageEventScreen = () => {
           onPress: async () => {
             setDeleting(true);
             try {
+              // Delete image from storage first if it exists
+              if (eventImageUrl) {
+                console.log("Deleting event image from storage:", eventImageUrl);
+                const deleted = await deleteImage(eventImageUrl);
+                if (deleted) {
+                  console.log("Event image deleted from storage");
+                } else {
+                  console.log("Could not delete image from storage (will proceed with event deletion)");
+                }
+              }
+
+              // Delete the event from database
               await deleteEvent(eventId);
+              
               Toast.show({
                 type: "success",
                 text1: "Event deleted",
-                text2: "The event has been removed successfully.",
+                text2: "The event and its image have been removed successfully.",
               });
               router.back();
             } catch (error) {
+              console.error("Error deleting event:", error);
               Toast.show({
                 type: "error",
                 text1: "Delete failed",
