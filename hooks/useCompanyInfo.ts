@@ -6,6 +6,8 @@ type CompanyInfoType = {
   phone: string;
   address: string;
   website: string;
+  logo_url?: string;
+  description?: string;
 };
 
 const useCompanyInfo = async ({
@@ -14,6 +16,8 @@ const useCompanyInfo = async ({
   phone,
   address,
   website,
+  logo_url,
+  description,
 }: CompanyInfoType) => {
   try {
     // Get the current user from the session
