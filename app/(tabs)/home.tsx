@@ -86,13 +86,29 @@ const Home = () => {
 
   const loadProfileImage = async () => {
     try {
+      setProfileImageLoading(true);
       const companyInfo = await getCompanyInfo();
       if (companyInfo?.logo_url) {
         setProfileImageUrl(companyInfo.logo_url);
       }
     } catch (error) {
       console.error('Failed to load profile image:', error);
+    } finally {
+      setProfileImageLoading(false);
     }
+  };
+
+  const handleImageLoadStart = (eventId: string) => {
+    setImageLoadingStates(prev => ({ ...prev, [eventId]: true }));
+  };
+
+  const handleImageLoadEnd = (eventId: string) => {
+    setImageLoadingStates(prev => ({ ...prev, [eventId]: false }));
+  };
+
+  const handleImageLoadError = (eventId: string) => {
+    console.error(`Failed to load image for event ${eventId}`);
+    setImageLoadingStates(prev => ({ ...prev, [eventId]: false }));
   };
 
   useFocusEffect(
