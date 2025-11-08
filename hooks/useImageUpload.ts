@@ -92,7 +92,27 @@ const useImageUpload = () => {
       console.log("File path:", filePath);
       console.log("URI:", uri);
       
+      // Check if user is authenticated
+      const user = await getUser();
+      console.log("Current user:", user ? user.id : "NOT AUTHENTICATED");
+      
+      if (!user) {
+        throw new Error("User is not authenticated. Please log in and try again.");
+      }
+      
+      // Try to list buckets for debugging
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        console.log("Available buckets:", buckets?.map(b => b.name) || "Unable to list");
+        if (bucketsError) {
+          console.log("Bucket list error:", bucketsError);
+        }
+      } catch (e) {
+        console.log("Could not list buckets:", e);
+      }
+      
       // Convert image to blob
+      console.log("Fetching image from URI...");
       const response = await fetch(uri);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.statusText}`);
@@ -115,26 +135,45 @@ const useImageUpload = () => {
       console.log("MIME type:", mimeType);
       console.log("Array buffer size:", arrayBuffer.byteLength, "bytes");
 
+      // Try to get bucket info
+      console.log("Checking bucket access...");
+      try {
+        const { data: files, error: listError } = await supabase.storage
+          .from(bucket)
+          .list('', { limit: 1 });
+        
+        if (listError) {
+          console.error("Bucket access check failed:", listError);
+          console.error("This might indicate RLS policy issues or bucket doesn't exist");
+        } else {
+          console.log("Bucket access OK - can list files");
+        }
+      } catch (e) {
+        console.error("Could not check bucket:", e);
+      }
+
       // Upload to Supabase Storage
       console.log("Attempting upload to Supabase...");
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(fileName, arrayBuffer, {
           contentType: mimeType,
-          upsert: true, // Replace if exists
+          upsert: true,
         });
 
       if (error) {
         console.error("=== Supabase Upload Error ===");
         console.error("Error object:", JSON.stringify(error, null, 2));
         console.error("Error message:", error.message);
-        console.error("Error name:", error.name);
+        console.error("Error status:", (error as any).statusCode);
         
         // Provide more specific error messages
-        if (error.message?.includes('Bucket not found')) {
-          throw new Error(`Storage bucket "${bucket}" not found. Please ensure the bucket is created in Supabase Dashboard: Storage → Create bucket → Name: "${bucket}" → Public: Yes`);
-        } else if (error.message?.includes('row-level security')) {
-          throw new Error(`Permission denied. Please check storage policies for "${bucket}" bucket in Supabase Dashboard.`);
+        if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
+          throw new Error(`Storage bucket "${bucket}" not found or not accessible. Please check:\n1. Bucket exists in Supabase Dashboard (Storage section)\n2. Bucket name is exactly: "${bucket}"\n3. Bucket is set to Public\n4. RLS policies allow authenticated users to INSERT`);
+        } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+          throw new Error(`Permission denied for bucket "${bucket}". Please create RLS policies:\n1. Go to Supabase Dashboard → Storage → Policies\n2. Add policy for INSERT on bucket "${bucket}"\n3. Allow authenticated users to upload`);
+        } else if ((error as any).statusCode === 404) {
+          throw new Error(`Bucket "${bucket}" returns 404. Verify bucket name matches exactly in Supabase Dashboard.`);
         } else {
           throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
         }
@@ -160,6 +199,7 @@ const useImageUpload = () => {
       console.error("=== Upload Error ===");
       console.error("Error:", error);
       console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
       throw new Error(error?.message || "Failed to upload image to storage");
     }
   };
