@@ -727,6 +727,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
