@@ -110,6 +110,22 @@ const Home = () => {
     setImageLoadingStates(prev => ({ ...prev, [eventId]: false }));
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Reload all data
+      await Promise.all([
+        displayCount(),
+        loadEvents(),
+        loadProfileImage()
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       displayCount();
