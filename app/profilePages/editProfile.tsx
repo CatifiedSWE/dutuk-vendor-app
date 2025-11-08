@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import useCompanyInfo from "@/hooks/useCompanyInfo";
+import useImageUpload from "@/hooks/useImageUpload";
 import Toast from "react-native-toast-message";
 
 const EditProfileScreen = () => {
