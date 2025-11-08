@@ -589,6 +589,22 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 0,
   },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 140,
+    backgroundColor: '#F0F0F0',
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   manageCardImage: {
     width: '100%',
     height: 140,
