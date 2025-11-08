@@ -20,9 +20,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'x-client-info': 'dutuk-frontend@1.0.0',
     },
     fetch: (url, options = {}) => {
-      // Add timeout to all requests but increase for email operations
+      // Increased timeout for storage operations (30 seconds)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout for email
+      const isStorageRequest = url.includes('/storage/');
+      const timeoutDuration = isStorageRequest ? 30000 : 10000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
       
       return fetch(url, {
         ...options,
