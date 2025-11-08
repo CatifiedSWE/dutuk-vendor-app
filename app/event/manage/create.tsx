@@ -85,12 +85,21 @@ const CreateEventScreen = () => {
         text2: 'Uploading image to server...'
       });
       
+      // Store old image URL before uploading new one
+      const oldImageUrl = eventImageUrl;
+      
       const imageUrl = await uploadImage(selectedImageUri, {
         bucket: "event-images",
         folder: "events",
       });
 
       if (imageUrl) {
+        // Delete old image from storage if it exists (user is replacing image)
+        if (oldImageUrl) {
+          console.log("Deleting old image:", oldImageUrl);
+          await deleteImage(oldImageUrl);
+        }
+
         setEventImageUrl(imageUrl);
         setSelectedImageUri(null); // Clear selection after upload
         Toast.show({
@@ -109,6 +118,46 @@ const CreateEventScreen = () => {
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!eventImageUrl) return;
+
+    Alert.alert(
+      "Remove Image",
+      "Are you sure you want to remove this image? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Delete from storage
+              console.log("Removing image from storage:", eventImageUrl);
+              await deleteImage(eventImageUrl);
+              
+              setEventImageUrl(null);
+              Toast.show({
+                type: 'success',
+                text1: 'Image Removed',
+                text2: 'Event image has been removed.'
+              });
+            } catch (error) {
+              console.error("Error removing image:", error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to remove image.'
+              });
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSave = async () => {
