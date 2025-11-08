@@ -34,17 +34,11 @@ const CreateEventScreen = () => {
 
   const { pickImage, uploadImage } = useImageUpload();
 
-  const handleEventImageUpload = async () => {
+  const handleEventImageSelect = async () => {
     try {
-      setUploadingImage(true);
+      setSelectingImage(true);
       
-      Toast.show({
-        type: 'info',
-        text1: 'Uploading...',
-        text2: 'Compressing and uploading image...'
-      });
-      
-      const imageUrl = await pickAndUploadImage({
+      const imageUri = await pickImage({
         bucket: "event-images",
         folder: "events",
         maxWidth: 1920,
@@ -52,8 +46,53 @@ const CreateEventScreen = () => {
         quality: 0.8,
       });
 
+      if (imageUri) {
+        setSelectedImageUri(imageUri);
+        Toast.show({
+          type: 'success',
+          text1: 'Image Selected',
+          text2: 'Now click "Upload Image" to attach it to the event.'
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to select event image:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Selection Failed',
+        text2: error?.message || 'Failed to select image. Please try again.'
+      });
+    } finally {
+      setSelectingImage(false);
+    }
+  };
+
+  const handleEventImageUpload = async () => {
+    if (!selectedImageUri) {
+      Toast.show({
+        type: 'error',
+        text1: 'No Image Selected',
+        text2: 'Please select an image first.'
+      });
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      
+      Toast.show({
+        type: 'info',
+        text1: 'Uploading...',
+        text2: 'Uploading image to server...'
+      });
+      
+      const imageUrl = await uploadImage(selectedImageUri, {
+        bucket: "event-images",
+        folder: "events",
+      });
+
       if (imageUrl) {
         setEventImageUrl(imageUrl);
+        setSelectedImageUri(null); // Clear selection after upload
         Toast.show({
           type: 'success',
           text1: 'Success',
