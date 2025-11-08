@@ -88,15 +88,12 @@ const Home = () => {
 
   const loadProfileImage = async () => {
     try {
-      setProfileImageLoading(true);
       const companyInfo = await getCompanyInfo();
       if (companyInfo?.logo_url) {
         setProfileImageUrl(companyInfo.logo_url);
       }
     } catch (error) {
       console.error('Failed to load profile image:', error);
-    } finally {
-      setProfileImageLoading(false);
     }
   };
 
