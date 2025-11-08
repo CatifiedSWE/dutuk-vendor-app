@@ -347,7 +347,7 @@ const ManageEventScreen = () => {
                 text1: "Event deleted",
                 text2: "The event and its image have been removed successfully.",
               });
-              router.back();
+              router.push("/(tabs)/home");
             } catch (error) {
               console.error("Error deleting event:", error);
               Toast.show({
@@ -363,6 +363,31 @@ const ManageEventScreen = () => {
       ],
       { cancelable: true }
     );
+  };
+
+  const handleBackNavigation = () => {
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to leave? Your changes will be discarded.",
+        [
+          {
+            text: "Stay",
+            style: "cancel",
+          },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => {
+              router.back();
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      router.back();
+    }
   };
 
   if (loading) {
