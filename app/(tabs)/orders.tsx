@@ -20,10 +20,12 @@ const OrdersScreen = () => {
   const insets = useSafeAreaInsets();
   const { orders, loading, getOrders } = useOrders();
   const [refreshing, setRefreshing] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string>("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png");
 
   // Fetch orders when component mounts
   useEffect(() => {
     loadOrders();
+    loadProfileImage();
   }, []);
 
   const loadOrders = async () => {
