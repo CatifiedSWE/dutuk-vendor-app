@@ -2,6 +2,7 @@ import placeholderImage from "@/assets/avatar.png";
 import getCount from "@/hooks/companyRequests/getRequestsCount";
 import getAllEvents from "@/hooks/getAllEvents";
 import getUser from "@/hooks/getUser";
+import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
