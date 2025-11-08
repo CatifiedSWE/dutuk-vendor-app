@@ -82,17 +82,21 @@ const ManageEventScreen = () => {
         }
         setLoading(true);
         const data = await getEventById(eventId);
-        setFormState({
+        const loadedFormState = {
           event: data.event || "",
           description: data.description || "",
           payment: data.payment ? String(data.payment) : "0",
           status: (STATUSES.includes(data.status) ? data.status : "upcoming") as ManageFormState["status"],
           startDate: data.start_date || "",
           endDate: data.end_date || "",
-        });
+        };
+        setFormState(loadedFormState);
+        setInitialFormState(loadedFormState);
+        
         // Load existing image if available
         if (data.image_url) {
           setEventImageUrl(data.image_url);
+          setInitialImageUrl(data.image_url);
         }
       } catch (error) {
         Toast.show({
