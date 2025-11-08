@@ -562,7 +562,7 @@ const ManageEventScreen = () => {
         )}
       </Pressable>
 
-      <Pressable style={styles.backButton} onPress={() => router.back()} disabled={saving || deleting}>
+      <Pressable style={styles.backButton} onPress={handleBackNavigation} disabled={saving || deleting}>
         <Ionicons name="arrow-back" size={18} color="#007AFF" />
         <Text style={styles.backButtonText}>Back</Text>
       </Pressable>
