@@ -9,7 +9,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Handle Google OAuth authentication
- * Automatically assigns vendor role if this is a new user registration
+ * Automatically assigns vendor role ONLY if this is a new user registration
  * Uses PKCE flow for enhanced security
  * 
  * @returns Promise<void>
@@ -95,10 +95,6 @@ const googleLogin = async (): Promise<void> => {
 
     console.log("Authorization code received, exchanging for session");
 
-    // Check if user existed before to determine if this is a new registration
-    const { data: { user: beforeUser } } = await supabase.auth.getUser();
-    const isNewUser = !beforeUser;
-
     // Exchange authorization code for session
     let sessionError;
     let sessionData;
@@ -135,33 +131,63 @@ const googleLogin = async (): Promise<void> => {
 
     console.log("Session established successfully");
 
-    // Extract user's name from Google account metadata
-    const googleUserName = sessionData.session?.user?.user_metadata?.full_name || 
-                          sessionData.session?.user?.user_metadata?.name || 
-                          null;
-    
-    console.log("Google user name:", googleUserName);
+    const userId = sessionData.session?.user?.id;
 
-    // Create company entry for new users from this app
-    // Pass the Google user's name as default company name
-    // For existing users, their company should already exist
-    const roleSet = await setRole(googleUserName);
-    
-    if (!roleSet && isNewUser) {
-      console.warn("Warning: Failed to create company entry for new Google OAuth user");
+    // Check if this is a new user by querying the companies table
+    // If no company exists, this is a first-time registration
+    const { data: existingCompany, error: companyCheckError } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    // PGRST116 means no rows found - this is a new user
+    const isNewUser = companyCheckError?.code === "PGRST116" || !existingCompany;
+
+    console.log("Is new user:", isNewUser);
+
+    // Only call setRole for NEW users (first time registration via Google)
+    if (isNewUser) {
+      console.log("New Google OAuth user detected, creating vendor profile and company entry");
+      
+      // Extract user's name from Google account metadata
+      const googleUserName = sessionData.session?.user?.user_metadata?.full_name || 
+                            sessionData.session?.user?.user_metadata?.name || 
+                            null;
+      
+      console.log("Google user name:", googleUserName);
+
+      // Create company entry for new users from this app
+      // Pass the Google user's name as default company name
+      const roleSet = await setRole(googleUserName);
+      
+      if (!roleSet) {
+        console.warn("Warning: Failed to create company entry for new Google OAuth user");
+        Toast.show({
+          type: 'info',
+          text1: 'Account Created',
+          text2: 'Welcome! If you experience any issues, please contact support.'
+        });
+      } else {
+        console.log("Successfully created vendor profile and company entry for new user");
+      }
+
+      // Show welcome message for new users
       Toast.show({
-        type: 'info',
-        text1: 'Account Created',
-        text2: 'Welcome! If you experience any issues, please contact support.'
+        type: 'success',
+        text1: 'Welcome to Dutuk!',
+        text2: 'Your vendor account has been created.'
+      });
+    } else {
+      console.log("Existing Google OAuth user, skipping vendor profile creation");
+      
+      // Show welcome back message for existing users
+      Toast.show({
+        type: 'success',
+        text1: 'Welcome Back!',
+        text2: 'Successfully signed in.'
       });
     }
-
-    // Show success message
-    Toast.show({
-      type: 'success',
-      text1: 'Welcome!',
-      text2: isNewUser ? 'Your vendor account has been created.' : 'Successfully signed in.'
-    });
 
     // Navigate to home
     router.replace("/(tabs)/home");

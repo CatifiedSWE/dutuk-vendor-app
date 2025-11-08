@@ -6,7 +6,7 @@ import setRole from "./setVendorAsRoleOnRegister";
 
 /**
  * Verify OTP (One-Time Password) for email verification
- * Sets vendor role after successful verification for new users
+ * Sets vendor role and creates company entry after successful verification for new users
  * 
  * @param email - User's email address
  * @param otp - The OTP code received via email
@@ -58,7 +58,7 @@ const verifyOTP = async (
 
     console.log("OTP verified successfully for user:", data.user.id);
 
-    // Set vendor role for the newly verified user
+    // Set vendor role and create company entry for the newly verified user
     // This is crucial for new registrations from this app
     const roleSet = await setRole();
     
@@ -71,7 +71,7 @@ const verifyOTP = async (
         text2: 'Your account was created. Please contact support if you experience any issues.'
       });
     } else {
-      console.log("Vendor role successfully set for user");
+      console.log("Vendor role and company entry successfully created for user");
     }
 
     Alert.alert("Success", "Email verified successfully! Welcome to Dutuk.");

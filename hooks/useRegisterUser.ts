@@ -2,12 +2,12 @@ import { router } from "expo-router";
 import Toast from 'react-native-toast-message';
 import { supabase } from "../utils/supabase";
 import setRole from "./setVendorAsRoleOnRegister";
-import checkUserExists from "./useCheckUserExists";
 
 /**
  * Register a new user with email and password
  * Automatically assigns 'vendor' role on successful registration
  * Handles email verification via OTP if required
+ * Creates entries in both user_profiles and companies tables
  * 
  * @param userEmail - User's email address
  * @param password - User's password (minimum 6 characters)
@@ -39,28 +39,6 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
     
     console.log("Attempting to register user:", trimmedEmail);
 
-    // Check if user already exists before attempting registration
-    console.log("Checking if user already exists...");
-    const { exists, error: checkError } = await checkUserExists(trimmedEmail);
-    
-    if (exists) {
-      console.log("User already exists:", trimmedEmail);
-      Toast.show({
-        type: 'error',
-        text1: 'Account Already Exists',
-        text2: 'An account with this email already exists. Please log in instead.'
-      });
-      
-      // Navigate to login page after a short delay
-      setTimeout(() => {
-        router.push('/auth/UserLogin');
-      }, 1500);
-      
-      throw new Error('User already exists');
-    }
-    
-    console.log("User does not exist, proceeding with registration");
-
     // Attempt to sign up the user
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: trimmedEmail,
@@ -86,6 +64,11 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
           text1: 'Account Already Exists',
           text2: 'An account with this email already exists. Please log in instead.'
         });
+        
+        // Navigate to login page after a short delay
+        setTimeout(() => {
+          router.push('/auth/UserLogin');
+        }, 1500);
       } else if (message.includes("password")) {
         Toast.show({
           type: 'error',
@@ -174,7 +157,7 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
       } else {
         console.log("Auto-login successful");
         
-        // Set vendor role for the new user
+        // Set vendor role and create company entry for the new user
         const roleSet = await setRole();
         if (!roleSet) {
           console.warn("Warning: Failed to set vendor role, but continuing login");
