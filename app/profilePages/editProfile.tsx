@@ -410,6 +410,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  uploadBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#007AFF",
+  },
+
+  uploadBtnText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
   outlinedBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
