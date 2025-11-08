@@ -133,14 +133,14 @@ const useImageUpload = () => {
   };
 
   /**
-   * Main function: Pick image, compress, and upload
-   * @returns Image URL or null if cancelled
+   * Pick and compress image only (no upload)
+   * @returns Compressed image URI or null if cancelled
    */
-  const pickAndUploadImage = async (
+  const pickImage = async (
     options: ImageUploadOptions
   ): Promise<string | null> => {
     try {
-      console.log("Starting image upload process with options:", options);
+      console.log("Starting image selection with options:", options);
 
       // Step 1: Request permissions
       const hasPermission = await requestPermissions();
@@ -172,20 +172,41 @@ const useImageUpload = () => {
         options.quality || 0.7
       );
 
-      // Step 4: Get user ID for folder structure
+      console.log("Image compressed successfully:", compressedUri);
+      return compressedUri;
+    } catch (error) {
+      console.error("Error in pickImage:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Upload a previously selected image
+   * @param imageUri - Local URI of the compressed image
+   * @param options - Upload options
+   * @returns Public URL of uploaded image
+   */
+  const uploadImage = async (
+    imageUri: string,
+    options: ImageUploadOptions
+  ): Promise<string> => {
+    try {
+      console.log("Starting image upload:", imageUri);
+
+      // Get user ID for folder structure
       const user = await getUser();
       if (!user) {
         throw new Error("User not authenticated");
       }
 
-      // Step 5: Create file path (user_id/folder/timestamp)
+      // Create file path (user_id/folder/timestamp)
       const timestamp = Date.now();
       const folder = options.folder || "default";
       const filePath = `${user.id}/${folder}/${timestamp}`;
 
-      // Step 6: Upload to Supabase Storage
+      // Upload to Supabase Storage
       const publicUrl = await uploadToStorage(
-        compressedUri,
+        imageUri,
         options.bucket,
         filePath
       );
@@ -193,12 +214,37 @@ const useImageUpload = () => {
       console.log("Image upload completed successfully:", publicUrl);
       return publicUrl;
     } catch (error) {
+      console.error("Error in uploadImage:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Main function: Pick image, compress, and upload (all in one)
+   * @returns Image URL or null if cancelled
+   */
+  const pickAndUploadImage = async (
+    options: ImageUploadOptions
+  ): Promise<string | null> => {
+    try {
+      console.log("Starting image upload process with options:", options);
+
+      // Pick and compress image
+      const compressedUri = await pickImage(options);
+      if (!compressedUri) {
+        return null; // User cancelled
+      }
+
+      // Upload the image
+      const publicUrl = await uploadImage(compressedUri, options);
+      return publicUrl;
+    } catch (error) {
       console.error("Error in pickAndUploadImage:", error);
       throw error;
     }
   };
 
-  return { pickAndUploadImage };
+  return { pickImage, uploadImage, pickAndUploadImage };
 };
 
 export default useImageUpload;
