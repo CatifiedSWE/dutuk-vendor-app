@@ -1,12 +1,14 @@
 import deleteEvent from "@/hooks/deleteEvent";
 import getEventById from "@/hooks/getEventById";
 import updateEvent, { UpdateEventPayload } from "@/hooks/updateEvent";
+import useImageUpload from "@/hooks/useImageUpload";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -15,6 +17,7 @@ import {
     View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import placeholderImage from "@/assets/avatar.png";
 
 const STATUSES = ["upcoming", "ongoing", "completed", "cancelled"] as const;
 
