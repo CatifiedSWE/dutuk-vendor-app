@@ -52,8 +52,27 @@ const ManageEventScreen = () => {
     startDate: "",
     endDate: "",
   });
+  const [initialFormState, setInitialFormState] = useState<ManageFormState | null>(null);
+  const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
 
   const { pickImage, uploadImage, deleteImage } = useImageUpload();
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialFormState) return false;
+    
+    const formChanged = 
+      formState.event !== initialFormState.event ||
+      formState.description !== initialFormState.description ||
+      formState.payment !== initialFormState.payment ||
+      formState.status !== initialFormState.status ||
+      formState.startDate !== initialFormState.startDate ||
+      formState.endDate !== initialFormState.endDate;
+    
+    const imageChanged = eventImageUrl !== initialImageUrl;
+    
+    return formChanged || imageChanged;
+  }, [formState, eventImageUrl, initialFormState, initialImageUrl]);
 
   useEffect(() => {
     const fetchEvent = async () => {
