@@ -125,6 +125,47 @@ const CreateEventScreen = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Create Event</Text>
 
+        {/* Event Image Section */}
+        <Text style={styles.label}>Event Image (Optional)</Text>
+        {eventImageUrl ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image 
+              source={{ uri: eventImageUrl }} 
+              style={styles.imagePreview} 
+            />
+            <Pressable 
+              style={styles.changeImageButton}
+              onPress={handleEventImageUpload}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.changeImageText}>Change Image</Text>
+              )}
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable 
+            style={styles.uploadButton}
+            onPress={handleEventImageUpload}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator color="#007AFF" size="large" />
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={40} color="#007AFF" />
+                <Text style={styles.uploadButtonText}>Upload Event Image</Text>
+                <Text style={styles.uploadButtonSubtext}>Tap to select from gallery</Text>
+              </>
+            )}
+          </Pressable>
+        )}
+
         <Text style={styles.label}>Event Title</Text>
         <TextInput
           style={styles.input}
