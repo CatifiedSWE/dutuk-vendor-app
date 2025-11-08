@@ -175,15 +175,30 @@ const EditProfileScreen = () => {
 
       {/* Profile Row */}
       <View style={styles.avatarRow}>
-        <Image source={{ uri: companyData.logoUrl }} style={styles.avatar} />
+        <View style={{ position: 'relative' }}>
+          <Image source={{ uri: companyData.logoUrl }} style={styles.avatar} />
+          {uploadingImage && (
+            <View style={styles.uploadingOverlay}>
+              <ActivityIndicator color="#FFF" size="large" />
+            </View>
+          )}
+        </View>
 
         <View style={styles.profileInfo}>
           <Text style={styles.companyName}>{companyData.name || "Company Name"}</Text>
           <Text style={styles.tagline}>{companyData.mail || "No email set"}</Text>
 
           <View style={styles.buttonRow}>
-            <Pressable style={styles.primaryBtn}>
-              <Text style={styles.primaryBtnText}>Change Profile</Text>
+            <Pressable 
+              style={[styles.primaryBtn, uploadingImage && { opacity: 0.6 }]} 
+              onPress={handleProfileImageUpload}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.primaryBtnText}>Change Profile</Text>
+              )}
             </Pressable>
 
             <Pressable style={styles.outlinedBtn}>
