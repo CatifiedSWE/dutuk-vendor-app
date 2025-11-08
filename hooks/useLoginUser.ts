@@ -103,13 +103,29 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
 
     console.log("Login successful for user:", data.user.id);
 
-    // Ensure user profile exists with proper role
-    // This handles edge cases where profile wasn't created during registration
-    const roleSet = await setRole();
-    
-    if (!roleSet) {
-      console.warn("Warning: Could not verify/set user profile after login");
-      // Don't block login, but log the warning
+    // Verify user profile and company exist (edge case: user created outside this app)
+    // Check if company entry exists
+    const { data: companyData } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("user_id", data.user.id)
+      .single();
+
+    // If no company exists, this might be a user created outside the app
+    // or registration didn't complete properly - create entries now
+    if (!companyData) {
+      console.log("No company found for user, creating vendor profile...");
+      const roleSet = await setRole();
+      
+      if (!roleSet) {
+        console.warn("Warning: Could not create user profile after login");
+        // Show info message but allow login
+        Toast.show({
+          type: "info",
+          text1: "Profile Setup",
+          text2: "Please complete your profile setup in settings.",
+        });
+      }
     }
 
     Toast.show({
