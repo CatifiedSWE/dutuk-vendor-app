@@ -203,6 +203,11 @@ const ManageEventScreen = () => {
         updates.date = dateRange;
       }
 
+      // Include image URL if present
+      if (eventImageUrl) {
+        updates.image_url = eventImageUrl;
+      }
+
       await updateEvent(eventId, updates);
 
       Toast.show({
