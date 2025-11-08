@@ -40,6 +40,10 @@ const ManageEventScreen = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectingImage, setSelectingImage] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [eventImageUrl, setEventImageUrl] = useState<string | null>(null);
   const [formState, setFormState] = useState<ManageFormState>({
     event: "",
     description: "",
@@ -48,6 +52,8 @@ const ManageEventScreen = () => {
     startDate: "",
     endDate: "",
   });
+
+  const { pickImage, uploadImage } = useImageUpload();
 
   useEffect(() => {
     const fetchEvent = async () => {
