@@ -10,6 +10,7 @@ import Toast from "react-native-toast-message";
 const EditProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [companyData, setCompanyData] = useState({
     name: "",
     description: "",
@@ -19,6 +20,8 @@ const EditProfileScreen = () => {
     mail: "",
     logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png"
   });
+
+  const { pickAndUploadImage } = useImageUpload();
 
   // Fetch company data on mount
   useEffect(() => {
