@@ -82,10 +82,22 @@ const Home = () => {
     }
   };
 
+  const loadProfileImage = async () => {
+    try {
+      const companyInfo = await getCompanyInfo();
+      if (companyInfo?.logo_url) {
+        setProfileImageUrl(companyInfo.logo_url);
+      }
+    } catch (error) {
+      console.error('Failed to load profile image:', error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       displayCount();
       loadEvents();
+      loadProfileImage();
     }, [])
   );
 
