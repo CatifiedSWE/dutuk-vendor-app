@@ -32,6 +32,44 @@ const CreateEventScreen = () => {
 
   const { pickAndUploadImage } = useImageUpload();
 
+  const handleEventImageUpload = async () => {
+    try {
+      setUploadingImage(true);
+      
+      Toast.show({
+        type: 'info',
+        text1: 'Uploading...',
+        text2: 'Compressing and uploading image...'
+      });
+      
+      const imageUrl = await pickAndUploadImage({
+        bucket: "event-images",
+        folder: "events",
+        maxWidth: 1920,
+        maxHeight: 1080,
+        quality: 0.8,
+      });
+
+      if (imageUrl) {
+        setEventImageUrl(imageUrl);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Event image uploaded successfully!'
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to upload event image:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Upload Failed',
+        text2: error?.message || 'Failed to upload event image. Please try again.'
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!eventName.trim()) {
       Toast.show({
@@ -62,6 +100,7 @@ const CreateEventScreen = () => {
         endDate: endDate.trim() || undefined,
         customerId: customerId.trim() || undefined,
         customerName: customerName.trim() || undefined,
+        image_url: eventImageUrl || undefined,
       });
 
       Toast.show({
