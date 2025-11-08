@@ -32,7 +32,7 @@ const CreateEventScreen = () => {
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
 
-  const { pickImage, uploadImage } = useImageUpload();
+  const { pickImage, uploadImage, deleteImage } = useImageUpload();
 
   const handleEventImageSelect = async () => {
     try {
