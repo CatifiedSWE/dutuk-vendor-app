@@ -414,17 +414,6 @@ const ManageEventScreen = () => {
             />
             <View style={styles.imageActionsRow}>
               <Pressable 
-                style={styles.changeImageButton}
-                onPress={handleEventImageSelect}
-                disabled={selectingImage || uploadingImage || saving || deleting}
-              >
-                {selectingImage ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                )}
-              </Pressable>
-              <Pressable 
                 style={styles.removeImageButton}
                 onPress={handleRemoveImage}
                 disabled={selectingImage || uploadingImage || saving || deleting}
