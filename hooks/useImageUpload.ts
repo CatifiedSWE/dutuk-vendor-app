@@ -64,6 +64,21 @@ const useImageUpload = () => {
   };
 
   /**
+   * Get proper MIME type from file extension
+   */
+  const getMimeType = (fileExt: string): string => {
+    const ext = fileExt.toLowerCase();
+    const mimeTypeMap: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+    };
+    return mimeTypeMap[ext] || 'image/jpeg';
+  };
+
+  /**
    * Upload image to Supabase Storage
    */
   const uploadToStorage = async (
@@ -85,11 +100,15 @@ const useImageUpload = () => {
 
       console.log("File name:", fileName);
 
+      // Get proper MIME type
+      const mimeType = getMimeType(fileExt);
+      console.log("MIME type:", mimeType);
+
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(fileName, arrayBuffer, {
-          contentType: `image/${fileExt}`,
+          contentType: mimeType,
           upsert: true, // Replace if exists
         });
 
