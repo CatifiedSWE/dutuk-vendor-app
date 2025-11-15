@@ -409,12 +409,12 @@ const CreateEventScreen = () => {
           })}
         </View>
 
-        <Text style={styles.label}>Start Date (YYYY-MM-DD)</Text>
+        <Text style={styles.label}>Start Date (optional)</Text>
         <TextInput
           style={styles.input}
           value={startDate}
           onChangeText={setStartDate}
-          placeholder="2025-01-01"
+          placeholder="YYYY-MM-DD (e.g. 2025-01-01)"
         />
 
         <Text style={styles.label}>End Date (optional)</Text>
