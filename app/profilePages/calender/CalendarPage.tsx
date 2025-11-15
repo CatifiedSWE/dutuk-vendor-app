@@ -200,6 +200,16 @@ const CalendarPage = ()=>{
     return(
         
         <View style={style.container}>
+          {/* Back Button */}
+          <Pressable 
+            style={style.backButton}
+            onPress={() => router.back()}
+            data-testid="calendar-back-button"
+          >
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            <Text style={style.backButtonText}>Back</Text>
+          </Pressable>
+
           <View style={style.headerContainer}>
             <Text style={style.headerTitle}>Manage Availability</Text>
             <Text style={style.headerSubtitle}>
