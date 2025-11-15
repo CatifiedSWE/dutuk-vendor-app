@@ -96,57 +96,177 @@ const CalendarPage = ()=>{
         getDates();
     },[])
 
+    const handleDayPress = async (day: any) => {
+      // Validate: Cannot mark past dates
+      if (isPastDate(day.dateString)) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Date',
+          text2: 'Cannot mark dates in the past',
+          position: 'bottom',
+        });
+        return;
+      }
+
+      const existingDate = calendarDates.find(d => d.date === day.dateString);
+
+      if (existingDate) {
+        // Date exists - show options
+        Alert.alert(
+          'Update Date',
+          `Current status: ${existingDate.status}\n\nWhat would you like to do?`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Toggle Status',
+              onPress: async () => {
+                const newStatus: CalendarDateStatus = 
+                  existingDate.status === 'available' ? 'unavailable' : 'available';
+                await setCalendarDate(day.dateString, newStatus, existingDate.event, existingDate.description);
+                await getDates(); // Reload
+                Toast.show({
+                  type: 'success',
+                  text1: 'Status Updated',
+                  text2: `Date marked as ${newStatus}`,
+                  position: 'bottom',
+                });
+              },
+            },
+            {
+              text: 'Remove',
+              style: 'destructive',
+              onPress: async () => {
+                await removeCalendarDate(day.dateString);
+                await getDates(); // Reload
+                Toast.show({
+                  type: 'success',
+                  text1: 'Date Removed',
+                  text2: 'Date marking has been removed',
+                  position: 'bottom',
+                });
+              },
+            },
+          ],
+          { cancelable: true }
+        );
+      } else {
+        // New date - show status selection
+        Alert.alert(
+          'Mark Date',
+          'Select availability status:',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Available',
+              onPress: async () => {
+                await setCalendarDate(day.dateString, 'available');
+                await getDates(); // Reload
+                Toast.show({
+                  type: 'success',
+                  text1: 'Date Marked',
+                  text2: 'Date marked as available',
+                  position: 'bottom',
+                });
+              },
+            },
+            {
+              text: 'Unavailable',
+              style: 'default',
+              onPress: async () => {
+                await setCalendarDate(day.dateString, 'unavailable');
+                await getDates(); // Reload
+                Toast.show({
+                  type: 'success',
+                  text1: 'Date Marked',
+                  text2: 'Date marked as unavailable',
+                  position: 'bottom',
+                });
+              },
+            },
+          ],
+          { cancelable: true }
+        );
+      }
+    };
+
     if(isAllowed){
 
     return(
         
         <View style={style.container}>
+          <View style={style.headerContainer}>
+            <Text style={style.headerTitle}>Manage Availability</Text>
+            <Text style={style.headerSubtitle}>
+              Tap a date to mark your availability
+            </Text>
+          </View>
+
+          <View style={style.legendContainer}>
+            <View style={style.legendItem}>
+              <View style={[style.legendBox, { backgroundColor: '#000000' }]} />
+              <Text style={style.legendText}>Available</Text>
+            </View>
+            <View style={style.legendItem}>
+              <View style={[style.legendBox, { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#FF3B30' }]} />
+              <Text style={[style.legendText, { color: '#FF3B30' }]}>Unavailable</Text>
+            </View>
+          </View>
         
             <Calendar 
 
             markingType={"custom"}
 
-            onDayPress={async (day)=>{
-                if(marked.includes(day.dateString)) {
-                    
-                      Alert.alert(
-                        'Confirmation',
-                        'Are you sure to remove the date',
-                [
-                    {
-                    text: 'Cancel',
-                    style: 'cancel',
-                    },
-                    {
-                    text:'Confirm',
-                    onPress:()=> setMarked(marked.filter((i)=> i!==day.dateString)),
-                    style:'default'
-                    }
-                ],
-                {
-                cancelable: true,
-    },
-  ); 
-                }
-                else setMarked([...marked,day.dateString]);
-               await storeDates(day.dateString);
-            }}
+            onDayPress={handleDayPress}
 
             style={style.calendar} 
 
-            onDayLongPress={async(date)=>{
-                if(!marked.includes(date.dateString)){
-                    setMarked([...marked,date.dateString]);
-                    await storeDates(date.dateString);
-                }
-                router.push({pathname:"/profilePages/calender/CalendarRedirect",params:{date:date.dateString}})
-            }}
+            // BACKEND VERSION COMMENTED OUT:
+            // onDayLongPress={async(date)=>{
+            //     if(!marked.includes(date.dateString)){
+            //         setMarked([...marked,date.dateString]);
+            //         await storeDates(date.dateString);
+            //     }
+            //     router.push({pathname:"/profilePages/calender/CalendarRedirect",params:{date:date.dateString}})
+            // }}
               
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#000000',
+              selectedDayBackgroundColor: '#007AFF',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#007AFF',
+              dayTextColor: '#000000',
+              textDisabledColor: '#d9e1e8',
+              dotColor: '#007AFF',
+              selectedDotColor: '#ffffff',
+              arrowColor: '#007AFF',
+              monthTextColor: '#000000',
+              textDayFontWeight: '500',
+              textMonthFontWeight: '600',
+              textDayHeaderFontWeight: '500',
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 12
+            }}
 
             markedDates={{
                 ...markedDates,
         }}
             /> 
+
+          <View style={style.instructionContainer}>
+            <Ionicons name="information-circle-outline" size={20} color="#666666" />
+            <Text style={style.instructionText}>
+              You cannot mark dates in the past
+            </Text>
+          </View>
        
 
         </View>
@@ -157,7 +277,8 @@ const CalendarPage = ()=>{
     else{
         return(
              <View style={style.container}>
-                <Text>Loading</Text>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={style.loadingText}>Loading Calendar...</Text>
              </View>
         )
     }
