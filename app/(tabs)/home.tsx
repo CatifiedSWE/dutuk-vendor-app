@@ -229,6 +229,7 @@ const Home = () => {
         {/* Calendar Section */}
         <View style={styles.calendarSection}>
           <Calendar
+            markingType={'custom'}
             markedDates={markedDates}
             onDayPress={(day) => {
               setSelectedDate(day.dateString);
