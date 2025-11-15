@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { Calendar } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getCalendarDates, CalendarDate } from '@/utils/calendarStorage';
 
 type Event = {
   id: string;
