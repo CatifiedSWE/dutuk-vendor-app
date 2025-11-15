@@ -1,10 +1,13 @@
+// BACKEND INTEGRATION COMMENTED OUT - USING ASYNCSTORAGE FOR LOCAL STORAGE
 import AuthButton from "@/components/AuthButton";
 import EditableInputField from "@/components/EditableInputField";
-import getStoreDatesInfo from "@/hooks/getStoredDatesInfo";
-import storeDatesInfo from "@/hooks/storeDatesInfo";
+// import getStoreDatesInfo from "@/hooks/getStoredDatesInfo";
+// import storeDatesInfo from "@/hooks/storeDatesInfo";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
+import { getCalendarDate, setCalendarDate } from "@/utils/calendarStorage";
+import Toast from 'react-native-toast-message';
 
 type prop = {
     date:string
@@ -19,15 +22,49 @@ const CalendarRedirect=()=>{
     const {date} =prop; 
 
     const storeInfo=async()=>{
-        const data ={date,eventName,eventDescription}
-        await storeDatesInfo(data); 
-        Alert.alert("Data Stored Successfully");
+        try {
+          // Backend version (commented out):
+          // const data ={date,eventName,eventDescription}
+          // await storeDatesInfo(data); 
+          
+          // AsyncStorage version:
+          const existingDate = await getCalendarDate(date);
+          const status = existingDate?.status || 'unavailable';
+          await setCalendarDate(date, status, eventName, eventDescription);
+          
+          Toast.show({
+            type: 'success',
+            text1: 'Saved',
+            text2: 'Date information updated successfully',
+            position: 'bottom',
+          });
+        } catch (error) {
+          console.error('Error saving date info:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to save date information',
+            position: 'bottom',
+          });
+        }
     }
 
     const getInfo=async()=>{
-        const info = await getStoreDatesInfo({date});
-        setEventDescription(info?.description);
-        setEventName(info?.event);
+        try {
+          // Backend version (commented out):
+          // const info = await getStoreDatesInfo({date});
+          // setEventDescription(info?.description);
+          // setEventName(info?.event);
+          
+          // AsyncStorage version:
+          const dateInfo = await getCalendarDate(date);
+          if (dateInfo) {
+            setEventDescription(dateInfo.description || "");
+            setEventName(dateInfo.event || "");
+          }
+        } catch (error) {
+          console.error('Error loading date info:', error);
+        }
     }
 
     useEffect(()=>{
