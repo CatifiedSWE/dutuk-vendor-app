@@ -399,22 +399,6 @@ const CreateEventScreen = () => {
           onChangeText={setEndDate}
           placeholder="YYYY-MM-DD (e.g. 2025-01-02)"
         />
-
-        <Text style={styles.label}>Customer ID (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={customerId}
-          onChangeText={setCustomerId}
-          placeholder="Paste customer UUID"
-        />
-
-        <Text style={styles.label}>Customer Name (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={customerName}
-          onChangeText={setCustomerName}
-          placeholder="e.g. Priya Singh"
-        />
       </View>
 
       <Pressable
