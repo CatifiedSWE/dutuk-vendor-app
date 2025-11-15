@@ -42,6 +42,7 @@ const Home = () => {
   const [profileImageUrl, setProfileImageUrl] = useState<string>("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png");
   const [profileImageLoading, setProfileImageLoading] = useState(false);
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
+  const [calendarDates, setCalendarDates] = useState<CalendarDate[]>([]);
 
   const manageableEvents = useMemo(() => {
     return events.filter((evt) => evt.status !== 'completed');
