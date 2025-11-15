@@ -216,53 +216,65 @@ const EditProfileScreen = () => {
         <Text style={styles.headerText}>Edit Profile</Text>
       </View>
 
-      {/* Profile Row */}
-      <View style={styles.avatarRow}>
-        <View style={{ position: 'relative' }}>
-          <Image 
-            source={{ uri: selectedImageUri || companyData.logoUrl }} 
-            style={styles.avatar} 
-          />
-          {(uploadingImage || selectingImage) && (
-            <View style={styles.uploadingOverlay}>
-              <ActivityIndicator color="#FFF" size="large" />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.profileInfo}>
-          <Text style={styles.companyName}>{companyData.name || "Company Name"}</Text>
-          <Text style={styles.tagline}>{companyData.mail || "No email set"}</Text>
-
-          <View style={styles.buttonRow}>
-            <Pressable 
-              style={[styles.primaryBtn, (selectingImage || uploadingImage) && { opacity: 0.6 }]} 
-              onPress={handleProfileImageSelect}
-              disabled={selectingImage || uploadingImage}
-            >
-              {selectingImage ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {selectedImageUri ? "Change Selection" : "Select Image"}
-                </Text>
-              )}
-            </Pressable>
-
-            {selectedImageUri && (
-              <Pressable 
-                style={[styles.uploadBtn, uploadingImage && { opacity: 0.6 }]} 
-                onPress={handleProfileImageUpload}
-                disabled={uploadingImage}
-              >
-                {uploadingImage ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.uploadBtnText}>Upload Image</Text>
-                )}
-              </Pressable>
+      {/* Profile Image Section */}
+      <View style={styles.profileImageSection}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatarWrapper}>
+            <Image 
+              source={{ uri: selectedImageUri || companyData.logoUrl }} 
+              style={styles.avatar} 
+            />
+            {(uploadingImage || selectingImage) && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator color="#FFF" size="large" />
+              </View>
             )}
           </View>
+        </View>
+
+        <View style={styles.profileTextInfo}>
+          <Text style={styles.companyName} numberOfLines={1} ellipsizeMode="tail">
+            {companyData.name || "Company Name"}
+          </Text>
+          <Text style={styles.tagline} numberOfLines={1} ellipsizeMode="tail">
+            {companyData.mail || "No email set"}
+          </Text>
+        </View>
+
+        <View style={styles.imageButtonsContainer}>
+          <Pressable 
+            style={[styles.primaryBtn, (selectingImage || uploadingImage) && styles.buttonDisabled]} 
+            onPress={handleProfileImageSelect}
+            disabled={selectingImage || uploadingImage}
+          >
+            {selectingImage ? (
+              <ActivityIndicator color="#FFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={16} color="#FFF" />
+                <Text style={styles.primaryBtnText}>
+                  {selectedImageUri ? "Change" : "Select"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+
+          {selectedImageUri && (
+            <Pressable 
+              style={[styles.uploadBtn, uploadingImage && styles.buttonDisabled]} 
+              onPress={handleProfileImageUpload}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={16} color="#FFF" />
+                  <Text style={styles.uploadBtnText}>Upload</Text>
+                </>
+              )}
+            </Pressable>
+          )}
         </View>
       </View>
 
