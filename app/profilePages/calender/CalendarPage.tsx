@@ -1,10 +1,21 @@
-import customStyle from "@/assets/customStyle";
-import getStoredDates from "@/hooks/getStoredDates";
-import storeDates from "@/hooks/useStoreDates";
+// BACKEND INTEGRATION COMMENTED OUT - USING ASYNCSTORAGE FOR LOCAL STORAGE
+// import customStyle from "@/assets/customStyle";
+// import getStoredDates from "@/hooks/getStoredDates";
+// import storeDates from "@/hooks/useStoreDates";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View, Pressable } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { 
+  getCalendarDates, 
+  setCalendarDate, 
+  removeCalendarDate, 
+  isPastDate,
+  CalendarDate,
+  CalendarDateStatus 
+} from "@/utils/calendarStorage";
+import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 
 const CalendarPage = ()=>{
@@ -22,27 +33,64 @@ const CalendarPage = ()=>{
       };
       text?: {
         color?: string;
+        fontWeight?: string;
       };
     };
   };
 };  
     const [isAllowed,setAllowed] = useState(false);
+    const [calendarDates, setCalendarDates] = useState<CalendarDate[]>([]);
 
+    // BACKEND CALL COMMENTED OUT - NOW USING ASYNCSTORAGE
     const getDates = async()=>{
-        let dates = await getStoredDates();
-        console.log(dates);
-        let correctDates: any[] | ((prevState: string[]) => string[]) =[];
-        dates?.forEach((obj)=>correctDates.push(obj.date));
-            setMarked(correctDates);
-            setAllowed(true);
+        try {
+          // Backend version (commented out):
+          // let dates = await getStoredDates();
+          // console.log(dates);
+          // let correctDates: any[] | ((prevState: string[]) => string[]) =[];
+          // dates?.forEach((obj)=>correctDates.push(obj.date));
+          // setMarked(correctDates);
+          
+          // AsyncStorage version:
+          const storedDates = await getCalendarDates();
+          console.log('Loaded dates from AsyncStorage:', storedDates);
+          setCalendarDates(storedDates);
+          setAllowed(true);
+        } catch (error) {
+          console.error('Error loading dates:', error);
+          setAllowed(true);
+        }
     }
 
-
-    const [marked,setMarked] = useState<string[]>(['2025-07-01']);
-    const markedDates:MarkedDateType = marked.reduce((acc,date)=>{
-        acc[date]={...customStyle};
-        return acc;
-    },{} as MarkedDateType)
+    // Convert calendar dates to marked dates format
+    const markedDates: MarkedDateType = calendarDates.reduce((acc, calDate) => {
+      if (calDate.status === 'unavailable') {
+        // Unavailable: red text
+        acc[calDate.date] = {
+          customStyles: {
+            text: {
+              color: '#FF3B30',
+              fontWeight: '700',
+            },
+          },
+        };
+      } else if (calDate.status === 'available') {
+        // Available: black circle with white text
+        acc[calDate.date] = {
+          customStyles: {
+            container: {
+              backgroundColor: '#000000',
+              borderRadius: 20,
+            },
+            text: {
+              color: '#FFFFFF',
+              fontWeight: '700',
+            },
+          },
+        };
+      }
+      return acc;
+    }, {} as MarkedDateType);
     
     useEffect(()=>{
         getDates();
