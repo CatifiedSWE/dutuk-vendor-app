@@ -19,7 +19,8 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.vendorapp.dutuk"
+      "package": "com.vendorapp.dutuk",
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
@@ -45,7 +46,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "eddf2984-5d28-45ae-a8c7-d80d9a690325"
+      }
     }
   }
 }
