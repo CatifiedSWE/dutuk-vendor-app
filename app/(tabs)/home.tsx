@@ -1,4 +1,4 @@
-import placeholderImage from "@/assets/avatar.png";
+import placeholderImage from "@/assets/avatar.jpg";
 import getCount from "@/hooks/companyRequests/getRequestsCount";
 import getAllEvents from "@/hooks/getAllEvents";
 import getUser from "@/hooks/getUser";

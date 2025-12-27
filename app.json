@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.vendorapp.dutuk",
-      "versionCode": 2
+      "versionCode": 6
     },
     "web": {
       "bundler": "metro",
