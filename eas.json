@@ -5,7 +5,7 @@
   },
   "build": {
     "base": {
-      "node": "20.19.0",
+      "node": "20.19.4",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://unqpmwlzyaqrryzyrslf.supabase.co"
       }
