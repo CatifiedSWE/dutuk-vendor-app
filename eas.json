@@ -1,21 +1,46 @@
 {
   "cli": {
-    "version": ">= 3.0.0"
+    "version": ">= 3.0.0",
+    "appVersionSource": "local"
   },
   "build": {
+    "base": {
+      "node": "20.19.0",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://unqpmwlzyaqrryzyrslf.supabase.co"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "extends": "base",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
+      "extends": "base",
+      "autoIncrement": true,
       "android": {
         "buildType": "apk"
       },
       "ios": {
-        "simulator": true
+        "simulator": false
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-services.json",
+        "track": "internal"
       }
     }
   }
