@@ -26,6 +26,12 @@ interface SendMessageParams {
     conversationId: string;
     receiverId: string;
     text: string;
+    attachment?: {
+        url: string;
+        name: string;
+        type: string;
+        size: string;
+    };
 }
 
 // =====================================================
@@ -195,14 +201,14 @@ export function useSendMessage() {
             params: SendMessageParams,
             paymentCompleted: boolean = false
         ): Promise<{ success: boolean; error?: string }> => {
-            const { conversationId, receiverId, text } = params;
+            const { conversationId, receiverId, text, attachment } = params;
 
-            if (!text.trim()) {
+            if (!text.trim() && !attachment) {
                 return { success: false, error: 'Message cannot be empty' };
             }
 
             // Check for contact info if payment not completed
-            if (!paymentCompleted) {
+            if (!paymentCompleted && text.trim()) {
                 const { hasContact, type } = containsContactInfo(text);
                 if (hasContact && type) {
                     const errorMsg = getContactErrorMessage(type);
@@ -220,13 +226,23 @@ export function useSendMessage() {
                     throw new Error('User not authenticated');
                 }
 
-                const { error: insertError } = await supabase.from('messages').insert({
+                const messageData: any = {
                     conversation_id: conversationId,
                     sender_id: user.id,
                     receiver_id: receiverId,
-                    message_text: text.trim(),
-                    has_attachment: false,
-                });
+                    message_text: text.trim() || (attachment ? '📎 Attachment' : ''),
+                    has_attachment: !!attachment,
+                };
+
+                // Add attachment fields if present
+                if (attachment) {
+                    messageData.attachment_url = attachment.url;
+                    messageData.attachment_name = attachment.name;
+                    messageData.attachment_type = attachment.type;
+                    messageData.attachment_size = attachment.size;
+                }
+
+                const { error: insertError } = await supabase.from('messages').insert(messageData);
 
                 if (insertError) throw insertError;
 

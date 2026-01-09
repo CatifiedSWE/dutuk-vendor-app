@@ -20,13 +20,27 @@ export const useOrders = () => {
 
   const updateOrderStatus = async (orderId: string, status: 'approved' | 'rejected'): Promise<boolean> => {
     setLoading(true);
-    
+
     try {
       // Get current user to verify ownership
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         console.error('Authentication error:', authError);
+        setLoading(false);
+        return false;
+      }
+
+      // First, get the order details (we need customer_id)
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('vendor_id', user.id)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error('Order not found:', orderError);
         setLoading(false);
         return false;
       }
@@ -34,14 +48,14 @@ export const useOrders = () => {
       // Update order status and verify vendor ownership
       const { data, error } = await supabase
         .from('orders')
-        .update({ 
+        .update({
           status,
           updated_at: new Date().toISOString()
         })
         .eq('id', orderId)
         .eq('vendor_id', user.id)
         .select();
-      
+
       if (error) {
         console.error('Failed to update order status:', error);
         setLoading(false);
@@ -54,14 +68,56 @@ export const useOrders = () => {
         setLoading(false);
         return false;
       }
-      
+
+      // If approved, create a conversation linked to this order
+      if (status === 'approved') {
+        // Check if conversation already exists
+        const { data: existingConv, error: checkError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('customer_id', orderData.customer_id)
+          .eq('vendor_id', user.id)
+          .single();
+
+        if (!existingConv) {
+          // Create new conversation linked to the order
+          const { error: convError } = await supabase
+            .from('conversations')
+            .insert({
+              customer_id: orderData.customer_id,
+              vendor_id: user.id,
+              order_id: orderId,
+              booking_status: 'accepted',
+              terms_accepted_by_customer: false,
+            });
+
+          if (convError) {
+            console.error('Failed to create conversation:', convError);
+            // Don't fail the whole operation - order was still approved
+          }
+        } else {
+          // Update existing conversation with order link and status
+          const { error: updateConvError } = await supabase
+            .from('conversations')
+            .update({
+              order_id: orderId,
+              booking_status: 'accepted',
+            })
+            .eq('id', existingConv.id);
+
+          if (updateConvError) {
+            console.error('Failed to update conversation:', updateConvError);
+          }
+        }
+      }
+
       // Update order status in local state
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
           order.id === orderId ? { ...order, status } : order
         )
       );
-      
+
       setLoading(false);
       return true;
     } catch (error) {
@@ -73,30 +129,30 @@ export const useOrders = () => {
 
   const getOrders = async (): Promise<Order[]> => {
     setLoading(true);
-    
+
     try {
       // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         console.error('Authentication error:', authError);
         setLoading(false);
         return [];
       }
-      
+
       // Fetch orders for this vendor
       const { data: ordersData, error: fetchError } = await supabase
         .from('orders')
         .select('*')
         .eq('vendor_id', user.id)
         .order('created_at', { ascending: false });
-      
+
       if (fetchError) {
         console.error('Failed to fetch orders:', fetchError);
         setLoading(false);
         return [];
       }
-      
+
       // Transform to match Order interface
       const transformedOrders: Order[] = (ordersData || []).map(order => ({
         id: order.id,
@@ -106,15 +162,15 @@ export const useOrders = () => {
         customerEmail: order.customer_email || '',
         customerPhone: order.customer_phone || '',
         status: order.status,
-        date: order.event_date ? new Date(order.event_date).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        date: order.event_date ? new Date(order.event_date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         }) : 'Date TBD',
         amount: order.amount,
         notes: order.notes
       }));
-      
+
       setOrders(transformedOrders);
       setLoading(false);
       return transformedOrders;

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'react-native-feather';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -50,20 +50,22 @@ const CustomerApprovalScreen = () => {
     setLoading(true);
     try {
       const success = await updateOrderStatus(params.orderId as string, 'approved');
-      
+
       if (success) {
         // Refresh orders list
         await getOrders();
-        
+
         Toast.show({
           type: 'success',
-          text1: 'Order Accepted',
-          text2: 'The order has been approved successfully!'
+          text1: 'Booking Accepted!',
+          text2: 'Redirecting to chat...'
         });
-        
-        // Navigate back after a short delay
+
+        // Navigate to chat with this customer after a short delay
         setTimeout(() => {
-          router.back();
+          router.replace({
+            pathname: '/(tabs)/chat',
+          });
         }, 1500);
       } else {
         Toast.show({
@@ -110,17 +112,17 @@ const CustomerApprovalScreen = () => {
             setLoading(true);
             try {
               const success = await updateOrderStatus(params.orderId as string, 'rejected');
-              
+
               if (success) {
                 // Refresh orders list
                 await getOrders();
-                
+
                 Toast.show({
                   type: 'success',
                   text1: 'Order Rejected',
                   text2: 'The order has been rejected.'
                 });
-                
+
                 // Navigate back after a short delay
                 setTimeout(() => {
                   router.back();
@@ -162,7 +164,7 @@ const CustomerApprovalScreen = () => {
     // Previous month's trailing days
     const prevMonth = new Date(currentYear, currentMonthIndex - 1, 0);
     const daysInPrevMonth = prevMonth.getDate();
-    
+
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       calendarDays.push({
         day: daysInPrevMonth - i,
@@ -222,7 +224,7 @@ const CustomerApprovalScreen = () => {
               const { day, isCurrentMonth } = dayObj;
               const isUnavailable = unavailableDates.includes(day) && isCurrentMonth;
               const isSelected = day === selectedDate && isCurrentMonth;
-              
+
               return (
                 <TouchableOpacity
                   key={dayIndex}
@@ -252,7 +254,7 @@ const CustomerApprovalScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -278,8 +280,8 @@ const CustomerApprovalScreen = () => {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[styles.acceptButton, loading && styles.buttonDisabled]} 
+          <TouchableOpacity
+            style={[styles.acceptButton, loading && styles.buttonDisabled]}
             onPress={handleAccept}
             disabled={loading}
           >
@@ -287,8 +289,8 @@ const CustomerApprovalScreen = () => {
               {loading ? "Processing..." : "Accept"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.rejectButton, loading && styles.buttonDisabled]} 
+          <TouchableOpacity
+            style={[styles.rejectButton, loading && styles.buttonDisabled]}
             onPress={handleReject}
             disabled={loading}
           >

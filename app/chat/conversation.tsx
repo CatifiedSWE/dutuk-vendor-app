@@ -1,20 +1,25 @@
+import { getFileIcon, isImageType, useAttachments } from '@/hooks/chat/useAttachments';
 import { useConversation } from '@/hooks/chat/useConversations';
 import { Message, useMarkAsRead, useMessages, useSendMessage } from '@/hooks/chat/useMessages';
+import { useTypingIndicator } from '@/hooks/chat/useTypingIndicator';
 import getUser from '@/hooks/getUser';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+    ActionSheetIOS,
     ActivityIndicator,
+    Alert,
     FlatList,
+    Image,
     KeyboardAvoidingView,
     Platform,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
-    View
+    View,
 } from 'react-native';
-import { AlertCircle, ArrowLeft, CheckCircle, Send } from 'react-native-feather';
+import { AlertCircle, ArrowLeft, CheckCircle, Paperclip, Send, X } from 'react-native-feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -41,6 +46,16 @@ export default function ConversationScreen() {
     const { conversation } = useConversation(conversationId || null);
     const { sendMessage, loading: sending } = useSendMessage();
     const { markAsRead } = useMarkAsRead();
+    const { otherPartyTyping, onTextChange } = useTypingIndicator(conversationId || null, true);
+    const {
+        attachment,
+        uploading,
+        pickImage,
+        takePhoto,
+        pickDocument,
+        uploadAttachment,
+        clearAttachment
+    } = useAttachments();
 
     // Get current user ID
     useEffect(() => {
@@ -69,20 +84,75 @@ export default function ConversationScreen() {
         }
     }, [messages.length]);
 
+    // Handle text input change for typing indicator
+    const handleTextChange = (text: string) => {
+        setMessage(text);
+        onTextChange(text.length > 0);
+    };
+
+    const handleAttachmentPress = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Take Photo', 'Choose from Gallery', 'Choose Document'],
+                    cancelButtonIndex: 0,
+                },
+                async (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        await takePhoto();
+                    } else if (buttonIndex === 2) {
+                        await pickImage();
+                    } else if (buttonIndex === 3) {
+                        await pickDocument();
+                    }
+                }
+            );
+        } else {
+            Alert.alert(
+                'Add Attachment',
+                'Choose an option',
+                [
+                    { text: 'Take Photo', onPress: takePhoto },
+                    { text: 'Choose from Gallery', onPress: pickImage },
+                    { text: 'Choose Document', onPress: pickDocument },
+                    { text: 'Cancel', style: 'cancel' },
+                ]
+            );
+        }
+    };
+
     const handleSend = async () => {
-        if (!message.trim() || !conversationId || !customerId) return;
+        if ((!message.trim() && !attachment) || !conversationId || !customerId) return;
+
+        let uploadedAttachment = null;
+
+        // Upload attachment first if present
+        if (attachment) {
+            uploadedAttachment = await uploadAttachment();
+            if (!uploadedAttachment) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Failed to upload attachment',
+                    text2: 'Please try again',
+                    position: 'top',
+                });
+                return;
+            }
+        }
 
         const result = await sendMessage(
             {
                 conversationId,
                 receiverId: customerId,
-                text: message.trim(),
+                text: message.trim() || (uploadedAttachment ? '📎 Attachment' : ''),
+                attachment: uploadedAttachment || undefined,
             },
             paymentCompleted
         );
 
         if (result.success) {
             setMessage('');
+            onTextChange(false);
         } else if (result.error) {
             Toast.show({
                 type: 'error',
@@ -102,16 +172,57 @@ export default function ConversationScreen() {
         });
     };
 
+    const renderAttachment = (msg: Message) => {
+        if (!msg.has_attachment || !msg.attachment_url) return null;
+
+        const isImage = msg.attachment_type && isImageType(msg.attachment_type);
+        const isOwn = msg.sender_id === currentUserId;
+
+        if (isImage) {
+            return (
+                <Pressable onPress={() => {/* TODO: Open full image viewer */ }}>
+                    <Image
+                        source={{ uri: msg.attachment_url }}
+                        style={styles.attachmentImage}
+                        resizeMode="cover"
+                    />
+                </Pressable>
+            );
+        }
+
+        return (
+            <Pressable
+                style={[styles.fileAttachment, isOwn ? styles.ownFileAttachment : styles.otherFileAttachment]}
+                onPress={() => {/* TODO: Open/download file */ }}
+            >
+                <Text style={styles.fileIcon}>{getFileIcon(msg.attachment_type || '')}</Text>
+                <View style={styles.fileInfo}>
+                    <Text style={[styles.fileName, isOwn && styles.ownFileName]} numberOfLines={1}>
+                        {msg.attachment_name || 'File'}
+                    </Text>
+                    {msg.attachment_size && (
+                        <Text style={[styles.fileSize, isOwn && styles.ownFileSize]}>
+                            {msg.attachment_size}
+                        </Text>
+                    )}
+                </View>
+            </Pressable>
+        );
+    };
+
     const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isOwn = item.sender_id === currentUserId;
-        const showTimestamp = true; // Could optimize to show only for first/last in group
+        const showTimestamp = true;
 
         return (
             <View style={[styles.messageWrapper, isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper]}>
                 <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-                    <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
-                        {item.message_text}
-                    </Text>
+                    {renderAttachment(item)}
+                    {item.message_text && item.message_text !== '📎 Attachment' && (
+                        <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
+                            {item.message_text}
+                        </Text>
+                    )}
                 </View>
                 {showTimestamp && (
                     <View style={styles.messageFooter}>
@@ -121,6 +232,23 @@ export default function ConversationScreen() {
                         )}
                     </View>
                 )}
+            </View>
+        );
+    };
+
+    const renderTypingIndicator = () => {
+        if (!otherPartyTyping) return null;
+
+        return (
+            <View style={styles.typingContainer}>
+                <View style={styles.typingBubble}>
+                    <View style={styles.typingDots}>
+                        <View style={[styles.typingDot, styles.typingDot1]} />
+                        <View style={[styles.typingDot, styles.typingDot2]} />
+                        <View style={[styles.typingDot, styles.typingDot3]} />
+                    </View>
+                </View>
+                <Text style={styles.typingText}>{customerName} is typing...</Text>
             </View>
         );
     };
@@ -194,33 +322,58 @@ export default function ConversationScreen() {
                         messages.length === 0 && styles.emptyListStyle,
                     ]}
                     ListEmptyComponent={renderEmptyMessages}
+                    ListFooterComponent={renderTypingIndicator}
                     showsVerticalScrollIndicator={false}
                     onContentSizeChange={() => {
                         flatListRef.current?.scrollToEnd({ animated: false });
                     }}
                 />
 
+                {/* Attachment Preview */}
+                {attachment && (
+                    <View style={styles.attachmentPreview}>
+                        {isImageType(attachment.type) ? (
+                            <Image source={{ uri: attachment.uri }} style={styles.attachmentPreviewImage} />
+                        ) : (
+                            <View style={styles.attachmentPreviewFile}>
+                                <Text style={styles.attachmentPreviewIcon}>{getFileIcon(attachment.type)}</Text>
+                                <Text style={styles.attachmentPreviewName} numberOfLines={1}>{attachment.name}</Text>
+                            </View>
+                        )}
+                        <Pressable style={styles.attachmentRemove} onPress={clearAttachment}>
+                            <X width={16} height={16} stroke="#FFFFFF" />
+                        </Pressable>
+                    </View>
+                )}
+
                 {/* Input */}
                 <View style={styles.inputContainer}>
+                    <Pressable
+                        style={styles.attachmentButton}
+                        onPress={handleAttachmentPress}
+                        disabled={uploading}
+                    >
+                        <Paperclip width={22} height={22} stroke="#666666" />
+                    </Pressable>
                     <TextInput
                         style={styles.input}
                         placeholder="Type a message..."
                         placeholderTextColor="#999999"
                         value={message}
-                        onChangeText={setMessage}
+                        onChangeText={handleTextChange}
                         multiline
                         maxLength={1000}
-                        editable={!sending}
+                        editable={!sending && !uploading}
                     />
                     <Pressable
                         style={[
                             styles.sendButton,
-                            (!message.trim() || sending) && styles.sendButtonDisabled,
+                            ((!message.trim() && !attachment) || sending || uploading) && styles.sendButtonDisabled,
                         ]}
                         onPress={handleSend}
-                        disabled={!message.trim() || sending}
+                        disabled={(!message.trim() && !attachment) || sending || uploading}
                     >
-                        {sending ? (
+                        {sending || uploading ? (
                             <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                             <Send width={20} height={20} stroke="#FFFFFF" />
@@ -306,6 +459,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 10,
         borderRadius: 18,
+        overflow: 'hidden',
     },
     ownBubble: {
         backgroundColor: '#7C2A2A',
@@ -340,14 +494,103 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#999999',
     },
+    attachmentImage: {
+        width: 200,
+        height: 150,
+        borderRadius: 12,
+        marginBottom: 4,
+    },
+    fileAttachment: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+        borderRadius: 10,
+        marginBottom: 4,
+    },
+    ownFileAttachment: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    otherFileAttachment: {
+        backgroundColor: '#F5F5F5',
+    },
+    fileIcon: {
+        fontSize: 24,
+        marginRight: 10,
+    },
+    fileInfo: {
+        flex: 1,
+    },
+    fileName: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#1A1A1A',
+    },
+    ownFileName: {
+        color: '#FFFFFF',
+    },
+    fileSize: {
+        fontSize: 11,
+        color: '#666666',
+        marginTop: 2,
+    },
+    ownFileSize: {
+        color: 'rgba(255,255,255,0.7)',
+    },
+    typingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingLeft: 4,
+    },
+    typingBubble: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    typingDots: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    typingDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#999999',
+        marginHorizontal: 2,
+    },
+    typingDot1: {
+        opacity: 0.4,
+    },
+    typingDot2: {
+        opacity: 0.6,
+    },
+    typingDot3: {
+        opacity: 0.8,
+    },
+    typingText: {
+        marginLeft: 8,
+        fontSize: 12,
+        color: '#999999',
+        fontStyle: 'italic',
+    },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingVertical: 12,
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: '#F0F0F0',
+    },
+    attachmentButton: {
+        padding: 10,
+        marginRight: 4,
     },
     input: {
         flex: 1,
@@ -359,7 +602,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         fontSize: 15,
         color: '#1A1A1A',
-        marginRight: 12,
+        marginRight: 8,
     },
     sendButton: {
         width: 44,
@@ -385,5 +628,42 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#999999',
         textAlign: 'center',
+    },
+    attachmentPreview: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        padding: 8,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderRadius: 12,
+    },
+    attachmentPreviewImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 8,
+    },
+    attachmentPreviewFile: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    attachmentPreviewIcon: {
+        fontSize: 24,
+        marginRight: 8,
+    },
+    attachmentPreviewName: {
+        flex: 1,
+        fontSize: 14,
+        color: '#1A1A1A',
+    },
+    attachmentRemove: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#7C2A2A',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
     },
 });
