@@ -1,19 +1,18 @@
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
-} from 'react-native';
-import { Bell, Calendar, Clock, Edit, FileText, User } from 'react-native-feather';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useOrders } from '@/hooks/useOrders';
 import getCompanyInfo from '@/hooks/useGetCompanyInfo';
+import { useOrders } from '@/hooks/useOrders';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native';
+import { Bell, Calendar, Edit, FileText } from 'react-native-feather';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 const OrdersScreen = () => {
@@ -66,7 +65,7 @@ const OrdersScreen = () => {
         {/* Left Icons Group */}
         <View style={styles.leftIconsGroup}>
           {/* Notification Bell */}
-          <Pressable 
+          <Pressable
             style={styles.headerIcon}
             onPress={() => {
               console.log('Notifications pressed');
@@ -74,9 +73,9 @@ const OrdersScreen = () => {
           >
             <Bell width={24} height={24} stroke="#000000" />
           </Pressable>
-          
+
           {/* Calendar Icon */}
-          <Pressable 
+          <Pressable
             style={styles.headerIcon}
             onPress={() => {
               router.push('/profilePages/calender/CalendarPage');
@@ -85,21 +84,21 @@ const OrdersScreen = () => {
             <Calendar width={24} height={24} stroke="#000000" />
           </Pressable>
         </View>
-        
+
         {/* Profile Icon */}
-        <Pressable 
+        <Pressable
           style={styles.profileIcon}
           onPress={() => {
             router.push('/profilePages/profile');
           }}
         >
-          <Image 
-            source={{ uri: profileImageUrl }} 
+          <Image
+            source={{ uri: profileImageUrl }}
             style={styles.profileImage}
           />
         </Pressable>
       </View>
-      
+
       <FlatList
         data={orders}
         keyExtractor={(item, index) => `${item.id}-${index}`}
@@ -135,11 +134,11 @@ const OrdersScreen = () => {
         )}
         renderItem={({ item }) => {
           const goTo = item.status === 'pending' ? '/orders/customerApproval' : '/orders/customerDetails';
-          
+
           // Map status for display - use type assertion for comparison
           const status = item.status as string;
           const displayStatus = status === 'completed' ? 'done' : status;
-          
+
           return (
             <Pressable
               style={styles.orderCard}
@@ -151,7 +150,9 @@ const OrdersScreen = () => {
                   customerName: item.customerName,
                   packageType: item.packageType,
                   customerEmail: item.customerEmail,
-                  customerPhone: item.customerPhone
+                  customerPhone: item.customerPhone,
+                  eventDate: item.date, // Pass the formatted date
+                  notes: item.notes || ''
                 }
               })}
             >

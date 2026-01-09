@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'react-native-feather';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,17 +7,52 @@ import Toast from "react-native-toast-message";
 import { useOrders } from "../../hooks/useOrders";
 
 const CustomerApprovalScreen = () => {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    orderId: string;
+    title: string;
+    customerName: string;
+    packageType: string;
+    customerEmail: string;
+    customerPhone: string;
+    eventDate: string;
+    notes: string;
+  }>();
   const { updateOrderStatus, getOrders } = useOrders();
-  const [selectedDate, setSelectedDate] = useState(26);
-  const [currentMonth, setCurrentMonth] = useState("October 2025");
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(9); // October = 9 (0-indexed)
-  const [currentYear, setCurrentYear] = useState(2025);
 
   const months = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
+
+  // Parse the event date from params (format: "January 20, 2026")
+  const parsedEventDate = useMemo(() => {
+    if (!params.eventDate) {
+      const now = new Date();
+      return { day: now.getDate(), month: now.getMonth(), year: now.getFullYear() };
+    }
+
+    // Try to parse "January 20, 2026" format
+    const parts = params.eventDate.split(' ');
+    if (parts.length >= 3) {
+      const monthName = parts[0];
+      const day = parseInt(parts[1].replace(',', ''));
+      const year = parseInt(parts[2]);
+      const monthIndex = months.indexOf(monthName);
+      if (monthIndex !== -1 && !isNaN(day) && !isNaN(year)) {
+        return { day, month: monthIndex, year };
+      }
+    }
+
+    // Fallback to current date
+    const now = new Date();
+    return { day: now.getDate(), month: now.getMonth(), year: now.getFullYear() };
+  }, [params.eventDate]);
+
+  const [selectedDate, setSelectedDate] = useState(parsedEventDate.day);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(parsedEventDate.month);
+  const [currentYear, setCurrentYear] = useState(parsedEventDate.year);
+  const [currentMonth, setCurrentMonth] = useState(`${months[parsedEventDate.month]} ${parsedEventDate.year}`);
+  const [loading, setLoading] = useState(false);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     let newMonthIndex = currentMonthIndex;
@@ -35,7 +70,7 @@ const CustomerApprovalScreen = () => {
     setCurrentYear(newYear);
     setCurrentMonth(`${months[newMonthIndex]} ${newYear}`);
   };
-  const [loading, setLoading] = useState(false);
+
 
   const handleAccept = async () => {
     if (!params.orderId) {
