@@ -1,6 +1,5 @@
 import { Tabs } from "expo-router";
-import React from "react";
-import { Home, FileText, User } from 'react-native-feather';
+import { FileText, Home, MessageCircle, User } from 'react-native-feather';
 
 export default function TabLayout() {
   return (
@@ -8,7 +7,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'none',
-        tabBarActiveTintColor: '#000000',
+        tabBarActiveTintColor: '#7C2A2A',
         tabBarInactiveTintColor: '#808080',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -30,47 +29,61 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen 
-        name="home" 
+      <Tabs.Screen
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Home 
-              width={24} 
-              height={24} 
+            <Home
+              width={24}
+              height={24}
               stroke={color}
               strokeWidth={focused ? 2.5 : 2}
             />
           ),
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="orders" 
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <MessageCircle
+              width={24}
+              height={24}
+              stroke={color}
+              strokeWidth={focused ? 2.5 : 2}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
         options={{
           title: 'Orders',
           tabBarIcon: ({ color, focused }) => (
-            <FileText 
-              width={24} 
-              height={24} 
+            <FileText
+              width={24}
+              height={24}
               stroke={color}
               strokeWidth={focused ? 2.5 : 2}
             />
           ),
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="profile" 
+      <Tabs.Screen
+        name="profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <User 
-              width={24} 
-              height={24} 
+            <User
+              width={24}
+              height={24}
               stroke={color}
               strokeWidth={focused ? 2.5 : 2}
             />
           ),
-        }} 
+        }}
       />
     </Tabs>
   );
