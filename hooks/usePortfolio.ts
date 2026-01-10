@@ -1,8 +1,45 @@
 import { supabase } from '@/utils/supabase';
-import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
+
+// Inline decode function to avoid external dependency
+function decode(base64: string): ArrayBuffer {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    const lookup = new Uint8Array(256);
+    for (let i = 0; i < chars.length; i++) {
+        lookup[chars.charCodeAt(i)] = i;
+    }
+
+    const bufferLength = base64.length * 0.75;
+    const len = base64.length;
+    let p = 0;
+    let encoded1, encoded2, encoded3, encoded4;
+
+    if (base64[base64.length - 1] === '=') {
+        p++;
+        if (base64[base64.length - 2] === '=') {
+            p++;
+        }
+    }
+
+    const arraybuffer = new ArrayBuffer(bufferLength - p);
+    const bytes = new Uint8Array(arraybuffer);
+
+    p = 0;
+    for (let i = 0; i < len; i += 4) {
+        encoded1 = lookup[base64.charCodeAt(i)];
+        encoded2 = lookup[base64.charCodeAt(i + 1)];
+        encoded3 = lookup[base64.charCodeAt(i + 2)];
+        encoded4 = lookup[base64.charCodeAt(i + 3)];
+
+        bytes[p++] = (encoded1 << 2) | (encoded2 >> 4);
+        bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2);
+        bytes[p++] = ((encoded3 & 3) << 6) | (encoded4 & 63);
+    }
+
+    return arraybuffer;
+}
 
 export interface PortfolioItem {
     id: string;
