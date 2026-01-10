@@ -1,10 +1,14 @@
 import { supabase } from '@/utils/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+
+const LAST_SEEN_KEY = 'orders_last_seen_timestamp';
 
 interface OrderNotificationContextType {
     newOrderCount: number;
     markOrdersAsSeen: () => void;
     subscriptionError: string | null;
+    isLoading: boolean;
 }
 
 const OrderNotificationContext = createContext<OrderNotificationContextType | undefined>(undefined);
@@ -13,19 +17,57 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
     const [newOrderCount, setNewOrderCount] = useState(0);
     const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [lastSeenTimestamp, setLastSeenTimestamp] = useState<string | null>(null);
 
-    // Get user ID on mount
+    // Get user ID and load last seen timestamp on mount
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+        const initialize = async () => {
+            try {
+                setIsLoading(true);
+
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    setIsLoading(false);
+                    return;
+                }
+
                 setUserId(user.id);
+
+                // Load last seen timestamp from AsyncStorage
+                const storedTimestamp = await AsyncStorage.getItem(`${LAST_SEEN_KEY}_${user.id}`);
+                setLastSeenTimestamp(storedTimestamp);
+
+                // Query orders created after last seen timestamp
+                let query = supabase
+                    .from('orders')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('vendor_id', user.id);
+
+                if (storedTimestamp) {
+                    query = query.gt('created_at', storedTimestamp);
+                }
+
+                const { count, error } = await query;
+
+                if (error) {
+                    console.error('Error fetching unseen orders count:', error);
+                } else {
+                    console.log('Unseen orders count:', count);
+                    setNewOrderCount(count || 0);
+                }
+            } catch (err) {
+                console.error('Error initializing order notifications:', err);
+            } finally {
+                setIsLoading(false);
             }
         };
-        getUser();
+
+        initialize();
     }, []);
 
-    // Subscribe to new orders
+    // Subscribe to new orders (realtime)
     useEffect(() => {
         if (!userId) return;
 
@@ -61,9 +103,21 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
         };
     }, [userId]);
 
-    const markOrdersAsSeen = useCallback(() => {
+    // Mark orders as seen - save current timestamp to AsyncStorage
+    const markOrdersAsSeen = useCallback(async () => {
         setNewOrderCount(0);
-    }, []);
+
+        if (userId) {
+            try {
+                const now = new Date().toISOString();
+                await AsyncStorage.setItem(`${LAST_SEEN_KEY}_${userId}`, now);
+                setLastSeenTimestamp(now);
+                console.log('Orders marked as seen at:', now);
+            } catch (err) {
+                console.error('Error saving last seen timestamp:', err);
+            }
+        }
+    }, [userId]);
 
     return (
         <OrderNotificationContext.Provider
@@ -71,6 +125,7 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
                 newOrderCount,
                 markOrdersAsSeen,
                 subscriptionError,
+                isLoading,
             }}
         >
             {children}
