@@ -133,7 +133,7 @@ export const usePortfolio = () => {
 
             // Pick image
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.8,
@@ -148,7 +148,7 @@ export const usePortfolio = () => {
             // Read file as base64
             const asset = result.assets[0];
             const base64 = await FileSystem.readAsStringAsync(asset.uri, {
-                encoding: FileSystem.EncodingType.Base64,
+                encoding: 'base64',
             });
 
             // Generate file path
