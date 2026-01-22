@@ -199,6 +199,84 @@ export const usePortfolio = () => {
         }
     };
 
+    // Pick and upload video
+    const pickAndUploadVideo = async (params?: CreatePortfolioItemParams): Promise<PortfolioItem | null> => {
+        try {
+            // Request permissions
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                setError('Permission to access media was denied');
+                return null;
+            }
+
+            // Pick video
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['videos'],
+                allowsEditing: true,
+                quality: 0.8,
+                videoMaxDuration: 60, // Max 60 seconds
+            });
+
+            if (result.canceled) return null;
+
+            setUploading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
+            const asset = result.assets[0];
+
+            // For videos, we need to read as base64 or use fetch
+            const response = await fetch(asset.uri);
+            const arrayBuffer = await response.arrayBuffer();
+
+            // Get file extension
+            const fileExt = asset.uri.split('.').pop()?.toLowerCase() || 'mp4';
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('portfolio')
+                .upload(fileName, arrayBuffer, {
+                    contentType: `video/${fileExt}`,
+                    upsert: false,
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('portfolio')
+                .getPublicUrl(uploadData.path);
+
+            // Create portfolio item
+            const { data, error: insertError } = await supabase
+                .from('portfolio_items')
+                .insert({
+                    vendor_id: user.id,
+                    image_url: publicUrl, // We're using image_url for all media types
+                    title: params?.title || null,
+                    description: params?.description || null,
+                    event_type: params?.event_type || null,
+                    event_date: params?.event_date || null,
+                    is_featured: params?.is_featured || false,
+                    sort_order: items.length,
+                })
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+
+            setItems((prev) => [data, ...prev]);
+            return data;
+        } catch (err: any) {
+            console.error('Error uploading video:', err);
+            setError(err.message);
+            return null;
+        } finally {
+            setUploading(false);
+        }
+    };
+
     // Update a portfolio item
     const updateItem = async (id: string, params: UpdatePortfolioItemParams): Promise<boolean> => {
         try {
@@ -244,7 +322,7 @@ export const usePortfolio = () => {
                         await supabase.storage.from('portfolio').remove([path]);
                     }
                 } catch (e) {
-                    console.warn('Could not delete image from storage:', e);
+                    console.warn('Could not delete media from storage:', e);
                 }
             }
 
@@ -271,6 +349,7 @@ export const usePortfolio = () => {
         uploading,
         refetch: fetchPortfolio,
         pickAndUploadImage,
+        pickAndUploadVideo,
         updateItem,
         deleteItem,
         toggleFeatured,

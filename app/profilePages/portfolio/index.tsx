@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActionSheetIOS,
     ActivityIndicator,
     Alert,
     Dimensions,
     Image,
     Modal,
+    Platform,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -34,6 +36,11 @@ const EVENT_TYPES = [
     'Other',
 ];
 
+// Helper to detect if URL is a video
+const isVideoUrl = (url: string): boolean => {
+    return /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(url);
+};
+
 const PortfolioPage = () => {
     const {
         items,
@@ -42,6 +49,7 @@ const PortfolioPage = () => {
         uploading,
         refetch,
         pickAndUploadImage,
+        pickAndUploadVideo,
         updateItem,
         deleteItem,
         toggleFeatured,
@@ -65,10 +73,46 @@ const PortfolioPage = () => {
         setShowDetailModal(true);
     };
 
-    const handleAddImage = async () => {
-        const result = await pickAndUploadImage();
-        if (result) {
-            toast.success('Image added to portfolio!');
+    const handleAddMedia = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Add Photo', 'Add Video'],
+                    cancelButtonIndex: 0,
+                },
+                async (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        const result = await pickAndUploadImage();
+                        if (result) toast.success('Photo added to portfolio!');
+                    } else if (buttonIndex === 2) {
+                        const result = await pickAndUploadVideo();
+                        if (result) toast.success('Video added to portfolio!');
+                    }
+                }
+            );
+        } else {
+            // Android - show alert with options
+            Alert.alert(
+                'Add to Portfolio',
+                'Choose what to add',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Photo',
+                        onPress: async () => {
+                            const result = await pickAndUploadImage();
+                            if (result) toast.success('Photo added to portfolio!');
+                        },
+                    },
+                    {
+                        text: 'Video',
+                        onPress: async () => {
+                            const result = await pickAndUploadVideo();
+                            if (result) toast.success('Video added to portfolio!');
+                        },
+                    },
+                ]
+            );
         }
     };
 
@@ -143,7 +187,7 @@ const PortfolioPage = () => {
                 </Pressable>
                 <Text style={styles.headerTitle}>Portfolio</Text>
                 <Pressable
-                    onPress={handleAddImage}
+                    onPress={handleAddMedia}
                     style={[styles.addButton, uploading && styles.addButtonDisabled]}
                     disabled={uploading}
                 >
@@ -178,7 +222,7 @@ const PortfolioPage = () => {
                         </Text>
                         <Pressable
                             style={[styles.emptyAddButton, uploading && styles.addButtonDisabled]}
-                            onPress={handleAddImage}
+                            onPress={handleAddMedia}
                             disabled={uploading}
                         >
                             {uploading ? (
@@ -193,7 +237,7 @@ const PortfolioPage = () => {
                     </View>
                 )}
 
-                {/* Image Grid */}
+                {/* Media Grid */}
                 {items.length > 0 && (
                     <View style={styles.grid}>
                         {items.map((item) => (
@@ -202,7 +246,16 @@ const PortfolioPage = () => {
                                 style={styles.gridItem}
                                 onPress={() => openDetailModal(item)}
                             >
-                                <Image source={{ uri: item.image_url }} style={styles.gridImage} />
+                                {isVideoUrl(item.image_url) ? (
+                                    <View style={styles.videoContainer}>
+                                        <Image source={{ uri: item.image_url }} style={styles.gridImage} />
+                                        <View style={styles.playIconContainer}>
+                                            <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.9)" />
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <Image source={{ uri: item.image_url }} style={styles.gridImage} />
+                                )}
                                 {item.is_featured && (
                                     <View style={styles.featuredBadge}>
                                         <Ionicons name="star" size={12} color="#FFC13C" />
@@ -410,6 +463,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         padding: 4,
         borderRadius: 12,
+    },
+    videoContainer: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+    },
+    playIconContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     // Modal styles
     modalContainer: {
