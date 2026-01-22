@@ -205,35 +205,56 @@ export const usePortfolio = () => {
             // Request permissions
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                setError('Permission to access media was denied');
+                setError('Permission to access media was denied. Please enable media access in Settings.');
                 return null;
             }
 
-            // Pick video
+            // Pick video with compression settings
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
-                allowsEditing: true,
-                quality: 0.8,
-                videoMaxDuration: 60, // Max 60 seconds
+                allowsEditing: false, // Disable editing to get full video info
+                quality: 0.5, // Lower quality for smaller file size
+                videoMaxDuration: 300, // Allow up to 5 minutes for selection, we'll validate later
+                videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality, // Compress video
             });
 
             if (result.canceled) return null;
+
+            const asset = result.assets[0];
+
+            // Check video duration (in milliseconds)
+            if (asset.duration && asset.duration > 60000) {
+                setError(`Video is too long (${Math.round(asset.duration / 1000)}s). Please select a video under 60 seconds.`);
+                return null;
+            }
+
+            // Check file size (max 50MB after compression)
+            if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
+                setError('Video file is too large. Please select a shorter or lower quality video.');
+                return null;
+            }
 
             setUploading(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            const asset = result.assets[0];
-
-            // For videos, we need to read as base64 or use fetch
-            const response = await fetch(asset.uri);
-            const arrayBuffer = await response.arrayBuffer();
+            // Read video file with better memory management
+            let arrayBuffer: ArrayBuffer;
+            try {
+                const response = await fetch(asset.uri);
+                if (!response.ok) {
+                    throw new Error('Failed to read video file');
+                }
+                arrayBuffer = await response.arrayBuffer();
+            } catch (fetchError: any) {
+                throw new Error('Could not access video file. Please try again.');
+            }
 
             // Get file extension
             const fileExt = asset.uri.split('.').pop()?.toLowerCase() || 'mp4';
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-            // Upload to Supabase Storage
+            // Upload to Supabase Storage with progress tracking
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('portfolio')
                 .upload(fileName, arrayBuffer, {
@@ -241,7 +262,15 @@ export const usePortfolio = () => {
                     upsert: false,
                 });
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                // Handle specific upload errors
+                if (uploadError.message.includes('size')) {
+                    throw new Error('Video is too large to upload. Please select a shorter video.');
+                } else if (uploadError.message.includes('timeout')) {
+                    throw new Error('Upload timed out. Please check your internet connection and try again.');
+                }
+                throw uploadError;
+            }
 
             // Get public URL
             const { data: { publicUrl } } = supabase.storage
@@ -253,7 +282,7 @@ export const usePortfolio = () => {
                 .from('portfolio_items')
                 .insert({
                     vendor_id: user.id,
-                    image_url: publicUrl, // We're using image_url for all media types
+                    image_url: publicUrl,
                     title: params?.title || null,
                     description: params?.description || null,
                     event_type: params?.event_type || null,
@@ -267,10 +296,25 @@ export const usePortfolio = () => {
             if (insertError) throw insertError;
 
             setItems((prev) => [data, ...prev]);
+            setError(null); // Clear any previous errors
             return data;
         } catch (err: any) {
             console.error('Error uploading video:', err);
-            setError(err.message);
+
+            // Provide user-friendly error messages
+            let errorMessage = 'Failed to upload video. Please try again.';
+
+            if (err.message.includes('Out of memory') || err.message.includes('allocation')) {
+                errorMessage = 'Video is too large. Please select a shorter video (under 60 seconds).';
+            } else if (err.message.includes('Network') || err.message.includes('network')) {
+                errorMessage = 'Network error. Please check your internet connection and try again.';
+            } else if (err.message.includes('timeout')) {
+                errorMessage = 'Upload timed out. Please try again with a stable internet connection.';
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            setError(errorMessage);
             return null;
         } finally {
             setUploading(false);
