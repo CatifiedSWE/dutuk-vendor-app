@@ -83,18 +83,10 @@ const PortfolioPage = () => {
                 async (buttonIndex) => {
                     if (buttonIndex === 1) {
                         const result = await pickAndUploadImage();
-                        if (result) {
-                            toast.success('Photo added to portfolio!');
-                        } else if (error) {
-                            toast.error(error);
-                        }
+                        if (result) toast.success('Photo added to portfolio!');
                     } else if (buttonIndex === 2) {
                         const result = await pickAndUploadVideo();
-                        if (result) {
-                            toast.success('Video added to portfolio!');
-                        } else if (error) {
-                            toast.error(error);
-                        }
+                        if (result) toast.success('Video added to portfolio!');
                     }
                 }
             );
@@ -109,22 +101,14 @@ const PortfolioPage = () => {
                         text: 'Photo',
                         onPress: async () => {
                             const result = await pickAndUploadImage();
-                            if (result) {
-                                toast.success('Photo added to portfolio!');
-                            } else if (error) {
-                                toast.error(error);
-                            }
+                            if (result) toast.success('Photo added to portfolio!');
                         },
                     },
                     {
                         text: 'Video',
                         onPress: async () => {
                             const result = await pickAndUploadVideo();
-                            if (result) {
-                                toast.success('Video added to portfolio!');
-                            } else if (error) {
-                                toast.error(error);
-                            }
+                            if (result) toast.success('Video added to portfolio!');
                         },
                     },
                 ]
