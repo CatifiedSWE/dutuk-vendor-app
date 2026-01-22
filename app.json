@@ -40,8 +40,7 @@
       ],
       "expo-asset",
       "expo-font",
-      "expo-web-browser",
-      "react-native-video-trim"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
