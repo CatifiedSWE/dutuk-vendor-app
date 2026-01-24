@@ -750,11 +750,13 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     marginLeft: -24,
     marginRight: -24,
+    overflow: 'visible',
   },
   manageSection: {
     marginBottom: 36,
     marginLeft: -24,
     marginRight: -24,
+    overflow: 'visible',
   },
   manageHeader: {
     flexDirection: 'row',
@@ -763,6 +765,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingLeft: 24,
     paddingRight: 24,
+    minHeight: 44,
   },
   createButton: {
     flexDirection: 'row',
@@ -814,18 +817,20 @@ const styles = StyleSheet.create({
   manageScrollContent: {
     paddingLeft: 24,
     paddingRight: 24,
+    paddingVertical: 8,
   },
   manageCard: {
     width: 270,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     marginRight: 16,
+    marginVertical: 8,
     overflow: 'hidden',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   imageContainer: {
     position: 'relative',
@@ -929,6 +934,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingLeft: 24,
     paddingRight: 24,
+    minHeight: 44,
   },
   viewAllButton: {
     flexDirection: 'row',
@@ -948,6 +954,7 @@ const styles = StyleSheet.create({
   eventsScrollContent: {
     paddingLeft: 24,
     paddingRight: 24,
+    paddingVertical: 8,
   },
   eventCard: {
     width: 170,
@@ -955,11 +962,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     marginRight: 14,
+    marginVertical: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   eventIconContainer: {
     width: 56,
@@ -1097,6 +1105,7 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     marginLeft: -24,
     marginRight: -24,
+    overflow: 'visible',
   },
   reviewsHeader: {
     flexDirection: 'row',
