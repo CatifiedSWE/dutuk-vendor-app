@@ -15,12 +15,12 @@ import Toast from "react-native-toast-message";
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 
 const POPULAR_REGIONS = [
-  'London, UK',
-  'New York, NY',
-  'Paris, FR',
-  'Dubai, UAE',
-  'Mumbai, IN',
-  'Singapore',
+  'Chennai, Tamil Nadu',
+  'Coimbatore, Tamil Nadu',
+  'Madurai, Tamil Nadu',
+  'Tiruchirappalli, Tamil Nadu',
+  'Salem, Tamil Nadu',
+  'Tirunelveli, Tamil Nadu',
 ];
 
 const OnboardingLocation = () => {
@@ -34,10 +34,10 @@ const OnboardingLocation = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user && location.trim()) {
-        // Update company location in the companies table
+        // Update company service_area in the companies table
         const { error } = await supabase
           .from("companies")
-          .update({ location: location.trim() })
+          .update({ service_area: location.trim() })
           .eq("user_id", user.id);
 
         if (error) {
