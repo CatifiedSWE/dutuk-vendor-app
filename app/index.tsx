@@ -14,9 +14,22 @@ export default function Index() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          // User is already logged in, redirect to home
-          console.log("Existing session found, redirecting to home");
-          router.replace("/(tabs)/home");
+          // Check if user has completed onboarding (has company profile)
+          const { data: companyData } = await supabase
+            .from('companies')
+            .select('company_name')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          if (companyData?.company_name) {
+            // Existing user with profile, redirect to home
+            console.log("Existing session found with profile, redirecting to home");
+            router.replace("/(tabs)/home");
+          } else {
+            // User exists but hasn't completed onboarding
+            console.log("Existing session but no profile, redirecting to onboarding");
+            router.replace('/auth/OnboardingGetStarted');
+          }
         } else {
           // No session, show welcome screen
           setIsCheckingAuth(false);
