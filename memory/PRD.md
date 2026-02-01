@@ -1,54 +1,44 @@
 # Dutuk - Event Vendor Management App PRD
 
 ## Original Problem Statement
-Fix issues in the onboarding page:
-1. Database schema mismatch - field name was wrong
-2. Location examples should show Tamil Nadu cities instead of foreign ones
+Fix two issues in onboarding pages:
+1. The onboarding page indicator is wrong
+2. There is one missing page for categories (for vendors to select event types)
 
 ## Architecture
-- **Platform**: React Native (Expo v54.0.21)
-- **Language**: TypeScript
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **Navigation**: Expo Router
-
-## Core Requirements (Static)
-- Event vendor management for photographers, caterers, decorators
-- Company profile management with onboarding flow
-- Event creation and management
-- Customer request handling
-- Calendar integration
+- React Native + Expo mobile app
+- Supabase backend (BaaS)
+- File-based routing with Expo Router
 
 ## User Personas
-- Event service vendors (photographers, videographers, caterers, decorators)
+- Event service vendors (photographers, caterers, decorators)
 - Event management companies
 - Freelance event professionals
 
-## What's Been Implemented
-### 2025-01-26
-- **Bug Fix**: Fixed OnboardingLocation.tsx to use correct database field `service_area` instead of `location`
-- **Enhancement**: Updated POPULAR_REGIONS array with Tamil Nadu cities:
-  - Chennai, Tamil Nadu
-  - Coimbatore, Tamil Nadu
-  - Madurai, Tamil Nadu
-  - Tiruchirappalli, Tamil Nadu
-  - Salem, Tamil Nadu
-  - Tirunelveli, Tamil Nadu
+## Core Requirements
+- 4-step onboarding flow for vendors
+- Categories selection page for vendor event types
+- Proper progress indicators across onboarding screens
 
-## Files Modified
-- `/app/app/auth/OnboardingLocation.tsx`
+## Implementation History
 
-## Prioritized Backlog
-### P0 (Critical)
-- None
+### 2025-02-01
+- Fixed progress indicator counts (now 4 bars across all onboarding screens)
+- Added new OnboardingCategories page with 6 event categories
+- Updated navigation flow: GetStarted → Categories → Location → Home
+- Categories page is UI-only (ready for backend integration)
 
-### P1 (High Priority)
-- None identified
+## What's Implemented
+- ✅ OnboardingGetStarted (Step 1/4) - Name input
+- ✅ OnboardingCategories (Step 2/4) - Event categories selection (UI only)
+- ✅ OnboardingLocation (Step 3/4) - Location selection
+- ✅ Progress indicators fixed across all screens
 
-### P2 (Nice to Have)
-- Dark mode support
-- Multi-language support
-- Analytics dashboard
+## Backlog
+- P1: Connect categories selection to backend database
+- P2: Add Step 4 onboarding screen if needed
+- P2: Add more event categories based on user feedback
 
 ## Next Tasks
-- Complete onboarding flow verification with actual Supabase database
-- Test full vendor registration and profile setup flow
+- Backend integration for categories storage
+- Testing full onboarding flow on actual device

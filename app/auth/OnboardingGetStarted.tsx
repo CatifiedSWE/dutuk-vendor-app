@@ -45,8 +45,8 @@ const OnboardingGetStarted = () => {
         }
       }
 
-      // Navigate to location onboarding step
-      router.push('/auth/OnboardingLocation');
+      // Navigate to categories onboarding step
+      router.push('/auth/OnboardingCategories');
     } catch (error) {
       console.error("Error in onboarding:", error);
       Toast.show({
@@ -61,7 +61,7 @@ const OnboardingGetStarted = () => {
 
   const handleSkip = () => {
     // Skip to next step without saving
-    router.push('/auth/OnboardingLocation');
+    router.push('/auth/OnboardingCategories');
   };
 
   return (
@@ -80,9 +80,9 @@ const OnboardingGetStarted = () => {
             <Ionicons name="chevron-back" size={20} color="#1c1917" />
           </Pressable>
 
-          {/* Progress Indicator */}
+          {/* Progress Indicator - Step 1 of 3 */}
           <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, styles.progressActive]} />
+            <View style={[styles.progressBar, styles.progressActiveCurrent]} />
             <View style={styles.progressBar} />
             <View style={styles.progressBar} />
           </View>
@@ -96,6 +96,7 @@ const OnboardingGetStarted = () => {
         >
           {/* Title Section */}
           <View style={styles.titleSection}>
+            <Text style={styles.stepLabel}>STEP 01</Text>
             <Text style={styles.title}>Let's get{'\n'}started</Text>
             <Text style={styles.subtitle}>
               Tell us who you are so we can personalize your dashboard.
@@ -187,22 +188,32 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   progressBar: {
-    width: 8,
+    width: 24,
     height: 4,
     backgroundColor: '#e7e5e4',
     borderRadius: 2,
   },
   progressActive: {
-    width: 32,
+    backgroundColor: '#800000',
+  },
+  progressActiveCurrent: {
+    width: 40,
     backgroundColor: '#800000',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 40,
-    paddingTop: 80,
+    paddingTop: 40,
   },
   titleSection: {
-    marginBottom: 80,
+    marginBottom: 60,
+  },
+  stepLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#800000',
+    letterSpacing: 2,
+    marginBottom: 8,
   },
   title: {
     fontSize: 44,

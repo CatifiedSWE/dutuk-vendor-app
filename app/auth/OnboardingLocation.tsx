@@ -91,12 +91,11 @@ const OnboardingLocation = () => {
             <Ionicons name="chevron-back" size={20} color="#1c1917" />
           </Pressable>
 
-          {/* Progress Indicator */}
+          {/* Progress Indicator - Step 3 of 3 */}
           <View style={styles.progressContainer}>
             <View style={[styles.progressBar, styles.progressActive]} />
             <View style={[styles.progressBar, styles.progressActive]} />
-            <View style={styles.progressBar} />
-            <View style={styles.progressBar} />
+            <View style={[styles.progressBar, styles.progressActiveCurrent]} />
           </View>
 
           <View style={{ width: 40 }} />
@@ -110,7 +109,7 @@ const OnboardingLocation = () => {
         >
           {/* Title Section */}
           <View style={styles.titleSection}>
-            <Text style={styles.stepLabel}>STEP 02</Text>
+            <Text style={styles.stepLabel}>STEP 03</Text>
             <Text style={styles.title}>Where is your{'\n'}business located?</Text>
             <Text style={styles.subtitle}>
               Tell us where you operate so we can connect you with local clients.
@@ -232,12 +231,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   progressBar: {
-    width: 32,
+    width: 24,
     height: 4,
     backgroundColor: '#e7e5e4',
     borderRadius: 2,
   },
   progressActive: {
+    backgroundColor: '#800000',
+  },
+  progressActiveCurrent: {
+    width: 40,
     backgroundColor: '#800000',
   },
   scrollContent: {
