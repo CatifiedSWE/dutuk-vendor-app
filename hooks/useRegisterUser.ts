@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from "expo-router";
 import Toast from 'react-native-toast-message';
 import { supabase } from "../utils/supabase";
@@ -111,6 +112,9 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
 
     // MVP: Auto-login after registration (no email verification)
     console.log("Proceeding to auto-login after registration");
+    
+    // Set flag to indicate this is a new user signup (for onboarding redirect)
+    await AsyncStorage.setItem('isNewUserSignup', 'true');
     
     // Automatically sign in the user
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
