@@ -1,4 +1,5 @@
 import getUser from '@/hooks/getUser';
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -62,7 +63,7 @@ export function usePushNotifications() {
         try {
             // Check if device (not simulator)
             if (!Device.isDevice) {
-                console.log('Push notifications only work on physical devices');
+                logger.log('Push notifications only work on physical devices');
                 setError('Push notifications require a physical device');
                 return null;
             }
@@ -78,7 +79,7 @@ export function usePushNotifications() {
             }
 
             if (finalStatus !== 'granted') {
-                console.log('Push notification permissions not granted');
+                logger.log('Push notification permissions not granted');
                 setError('Permission to receive notifications was denied');
                 return null;
             }
@@ -107,10 +108,10 @@ export function usePushNotifications() {
             }
 
             setExpoPushToken(token);
-            console.log('Push notification token:', token);
+            logger.log('Push notification token obtained');
             return token;
         } catch (err: any) {
-            console.error('Error registering for push notifications:', err);
+            logger.error('Error registering for push notifications');
             setError(err.message || 'Failed to register for push notifications');
             return null;
         } finally {
@@ -142,10 +143,10 @@ export function usePushNotifications() {
                 );
 
             if (upsertError) {
-                console.error('Error storing push token:', upsertError);
+                logger.error('Error storing push token');
             }
         } catch (err) {
-            console.error('Error storing push token:', err);
+            logger.error('Error storing push token');
         }
     };
 
@@ -163,7 +164,7 @@ export function usePushNotifications() {
                     .eq('token', expoPushToken);
             }
         } catch (err) {
-            console.error('Error removing push token:', err);
+            logger.error('Error removing push token');
         }
     }, [expoPushToken]);
 
@@ -173,23 +174,23 @@ export function usePushNotifications() {
         notificationListener.current = Notifications.addNotificationReceivedListener(
             (notification) => {
                 setNotification(notification);
-                console.log('Notification received:', notification);
+                logger.log('Notification received');
             }
         );
 
         // Listen for notification responses (user taps notification)
         responseListener.current = Notifications.addNotificationResponseReceivedListener(
             (response) => {
-                console.log('Notification response:', response);
+                logger.log('Notification response received');
                 const data = response.notification.request.content.data;
 
                 // Handle navigation based on notification type
                 if (data?.type === 'new_message') {
                     // TODO: Navigate to chat conversation
-                    console.log('Navigate to conversation:', data.conversationId);
+                    logger.log('Navigate to conversation');
                 } else if (data?.type === 'order_accepted') {
                     // TODO: Navigate to orders
-                    console.log('Navigate to orders');
+                    logger.log('Navigate to orders');
                 }
             }
         );

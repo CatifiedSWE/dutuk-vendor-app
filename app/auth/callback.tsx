@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -22,11 +23,11 @@ export default function AuthCallback() {
         const { data, error } = await supabase.auth.exchangeCodeForSession(url);
 
         if (error) {
-          console.error("exchangeCodeForSession error:", error.message);
+          logger.error("exchangeCodeForSession error");
           // Redirect to login on error
           router.replace("/auth/UserLogin");
         } else {
-          console.log("Session:", data.session);
+          logger.log("Session established, redirecting to home");
           router.replace("/(tabs)/home");
         }
       }

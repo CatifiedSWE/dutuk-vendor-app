@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import RouteAssist from "@/components/RouteAssist";
 import getProvider from "@/hooks/getProvider";
 import logoutUser from "@/hooks/useLogoutUser";
@@ -11,7 +12,7 @@ const Index = () => {
     const provider = await getProvider();
     if(provider==="email") {
       setEmail(true);
-      console.log("GOT THE THING");
+      logger.log("GOT THE THING");
      }
   }
 

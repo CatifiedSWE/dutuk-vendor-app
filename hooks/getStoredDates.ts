@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 export interface StoredDate {
@@ -20,7 +21,7 @@ const getStoredDates = async (): Promise<StoredDate[] | undefined> => {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError);
+      logger.error("Authentication error:", authError);
       return undefined;
     }
 
@@ -33,7 +34,7 @@ const getStoredDates = async (): Promise<StoredDate[] | undefined> => {
       .order("date", { ascending: true });
 
     if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("Error fetching dates:", fetchError);
+      logger.error("Error fetching dates:", fetchError);
       return undefined;
     }
 
@@ -45,10 +46,10 @@ const getStoredDates = async (): Promise<StoredDate[] | undefined> => {
       description: d.description || undefined,
     }));
 
-    console.log("Fetched dates from Supabase:", storedDates);
+    logger.log("Fetched dates from Supabase:", storedDates);
     return storedDates;
   } catch (e) {
-    console.error("Error in getStoredDates:", e);
+    logger.error("Error in getStoredDates:", e);
     return undefined;
   }
 };

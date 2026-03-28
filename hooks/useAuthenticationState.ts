@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
+import { Session, User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
 
 /**
  * Authentication state interface
@@ -36,7 +37,7 @@ const useAuthenticationState = (): AuthState => {
         setLoading(true);
         setError(null);
 
-        const { data: { session: currentSession }, error: sessionError } = 
+        const { data: { session: currentSession }, error: sessionError } =
           await supabase.auth.getSession();
 
         if (sessionError) {
@@ -53,7 +54,7 @@ const useAuthenticationState = (): AuthState => {
           }
         }
       } catch (err: any) {
-        console.error('Error initializing auth:', err);
+        logger.error('Error initializing auth:', err?.message);
         if (mounted) {
           setError(err.message || 'Failed to initialize authentication');
         }
@@ -74,7 +75,7 @@ const useAuthenticationState = (): AuthState => {
           .single();
 
         if (roleError) {
-          console.error('Error fetching user role:', roleError);
+          logger.error('Error fetching user role');
           return;
         }
 
@@ -82,7 +83,7 @@ const useAuthenticationState = (): AuthState => {
           setUserRole(data.role);
         }
       } catch (err) {
-        console.error('Unexpected error fetching user role:', err);
+        logger.error('Unexpected error fetching user role');
       }
     };
 
@@ -91,8 +92,8 @@ const useAuthenticationState = (): AuthState => {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
-        console.log('Auth state changed:', _event);
-        
+        logger.log('Auth state changed:', _event);
+
         if (mounted) {
           setSession(newSession);
           setUser(newSession?.user ?? null);

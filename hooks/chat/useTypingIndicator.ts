@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -63,7 +64,7 @@ export function useTypingIndicator(conversationId: string | null, isVendor: bool
                 .update(updateData)
                 .eq('id', conversationId);
         } catch (error) {
-            console.error('Error updating typing status:', error);
+            logger.error('Error updating typing status:', error);
         }
     }, [conversationId, isVendor]);
 
@@ -85,7 +86,7 @@ export function useTypingIndicator(conversationId: string | null, isVendor: bool
                 .update(updateData)
                 .eq('id', conversationId);
         } catch (error) {
-            console.error('Error clearing typing status:', error);
+            logger.error('Error clearing typing status:', error);
         }
     }, [conversationId, isVendor]);
 

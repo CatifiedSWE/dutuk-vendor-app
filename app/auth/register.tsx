@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 import registerUser from "@/hooks/useRegisterUser";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,7 +45,7 @@ const Register = () => {
     try {
       await registerUser(email.trim().toLowerCase(), password);
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
@@ -52,13 +53,13 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
                 const { count, error } = await query;
 
                 if (error) {
-                    console.error('Error fetching unseen orders count:', error);
+                    logger.error('Error fetching unseen orders count:', error);
                 } else {
-                    console.log('Unseen orders count:', count);
+                    logger.log('Unseen orders count:', count);
                     setNewOrderCount(count || 0);
                 }
             } catch (err) {
-                console.error('Error initializing order notifications:', err);
+                logger.error('Error initializing order notifications:', err);
             } finally {
                 setIsLoading(false);
             }
@@ -71,7 +72,7 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
     useEffect(() => {
         if (!userId) return;
 
-        console.log('Setting up order notification subscription for vendor:', userId);
+        logger.log('Setting up order notification subscription for vendor:', userId);
 
         const channel = supabase
             .channel(`order-notifications-${userId}`)
@@ -84,14 +85,14 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
                     filter: `vendor_id=eq.${userId}`,
                 },
                 (payload) => {
-                    console.log('New order notification:', payload.new);
+                    logger.log('New order notification:', payload.new);
                     setNewOrderCount((prev) => prev + 1);
                 }
             )
             .subscribe((status, err) => {
-                console.log('Order notification subscription status:', status);
+                logger.log('Order notification subscription status:', status);
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('Notification subscription error:', err);
+                    logger.error('Notification subscription error:', err);
                     setSubscriptionError('Failed to connect to notifications');
                 } else if (status === 'SUBSCRIBED') {
                     setSubscriptionError(null);
@@ -112,9 +113,9 @@ export function OrderNotificationProvider({ children }: { children: ReactNode })
                 const now = new Date().toISOString();
                 await AsyncStorage.setItem(`${LAST_SEEN_KEY}_${userId}`, now);
                 setLastSeenTimestamp(now);
-                console.log('Orders marked as seen at:', now);
+                logger.log('Orders marked as seen at:', now);
             } catch (err) {
-                console.error('Error saving last seen timestamp:', err);
+                logger.error('Error saving last seen timestamp:', err);
             }
         }
     }, [userId]);

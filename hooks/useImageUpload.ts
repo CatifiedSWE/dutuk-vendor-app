@@ -1,6 +1,7 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
-import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import getUser from "./getUser";
 
 export type ImageUploadOptions = {
@@ -24,15 +25,15 @@ const useImageUpload = () => {
   const requestPermissions = async (): Promise<boolean> => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (status !== "granted") {
-        console.error("Permission to access media library denied");
+        logger.error("Permission to access media library denied");
         return false;
       }
-      
+
       return true;
     } catch (error) {
-      console.error("Error requesting permissions:", error);
+      logger.error("Error requesting permissions");
       return false;
     }
   };
@@ -47,18 +48,18 @@ const useImageUpload = () => {
     quality: number = 0.7
   ): Promise<string> => {
     try {
-      console.log("Compressing image:", uri);
-      
+      logger.log("Compressing image");
+
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: maxWidth, height: maxHeight } }],
         { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
       );
-      
-      console.log("Image compressed successfully:", manipResult.uri);
+
+      logger.log("Image compressed successfully");
       return manipResult.uri;
     } catch (error) {
-      console.error("Error compressing image:", error);
+      logger.error("Error compressing image");
       throw new Error("Failed to compress image");
     }
   };
@@ -87,73 +88,32 @@ const useImageUpload = () => {
     filePath: string
   ): Promise<string> => {
     try {
-      console.log("=== Starting Upload to Storage ===");
-      console.log("Bucket:", bucket);
-      console.log("File path:", filePath);
-      console.log("URI:", uri);
-      
+      logger.log("Starting upload to storage");
+
       // Check if user is authenticated
       const user = await getUser();
-      console.log("Current user:", user ? user.id : "NOT AUTHENTICATED");
-      
+
       if (!user) {
         throw new Error("User is not authenticated. Please log in and try again.");
       }
-      
-      // Try to list buckets for debugging
-      try {
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        console.log("Available buckets:", buckets?.map(b => b.name) || "Unable to list");
-        if (bucketsError) {
-          console.log("Bucket list error:", bucketsError);
-        }
-      } catch (e) {
-        console.log("Could not list buckets:", e);
-      }
-      
+
       // Convert image to blob
-      console.log("Fetching image from URI...");
       const response = await fetch(uri);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
-      console.log("Image blob size:", blob.size, "bytes");
-      console.log("Image blob type:", blob.type);
 
       // Create array buffer from blob
       const arrayBuffer = await new Response(blob).arrayBuffer();
       const fileExt = uri.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${filePath}.${fileExt}`;
 
-      console.log("File name:", fileName);
-      console.log("File extension:", fileExt);
-
       // Get proper MIME type
       const mimeType = getMimeType(fileExt);
-      console.log("MIME type:", mimeType);
-      console.log("Array buffer size:", arrayBuffer.byteLength, "bytes");
-
-      // Try to get bucket info
-      console.log("Checking bucket access...");
-      try {
-        const { data: files, error: listError } = await supabase.storage
-          .from(bucket)
-          .list('', { limit: 1 });
-        
-        if (listError) {
-          console.error("Bucket access check failed:", listError);
-          console.error("This might indicate RLS policy issues or bucket doesn't exist");
-        } else {
-          console.log("Bucket access OK - can list files");
-        }
-      } catch (e) {
-        console.error("Could not check bucket:", e);
-      }
 
       // Upload to Supabase Storage
-      console.log("Attempting upload to Supabase...");
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(fileName, arrayBuffer, {
@@ -162,44 +122,24 @@ const useImageUpload = () => {
         });
 
       if (error) {
-        console.error("=== Supabase Upload Error ===");
-        console.error("Error object:", JSON.stringify(error, null, 2));
-        console.error("Error message:", error.message);
-        console.error("Error status:", (error as any).statusCode);
-        
-        // Provide more specific error messages
-        if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
-          throw new Error(`Storage bucket "${bucket}" not found or not accessible. Please check:\n1. Bucket exists in Supabase Dashboard (Storage section)\n2. Bucket name is exactly: "${bucket}"\n3. Bucket is set to Public\n4. RLS policies allow authenticated users to INSERT`);
-        } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
-          throw new Error(`Permission denied for bucket "${bucket}". Please create RLS policies:\n1. Go to Supabase Dashboard → Storage → Policies\n2. Add policy for INSERT on bucket "${bucket}"\n3. Allow authenticated users to upload`);
-        } else if ((error as any).statusCode === 404) {
-          throw new Error(`Bucket "${bucket}" returns 404. Verify bucket name matches exactly in Supabase Dashboard.`);
-        } else {
-          throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
-        }
+        logger.error("Upload failed:", error.message);
+        throw new Error('Upload failed. Please try again.');
       }
 
-      console.log("Upload successful!");
-      console.log("Upload data:", JSON.stringify(data, null, 2));
+      logger.log("Upload complete");
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from(bucket)
         .getPublicUrl(fileName);
 
-      console.log("Public URL generated:", urlData.publicUrl);
-      
       if (!urlData.publicUrl) {
         throw new Error("Failed to generate public URL");
       }
-      
-      console.log("=== Upload Complete ===");
+
       return urlData.publicUrl;
     } catch (error: any) {
-      console.error("=== Upload Error ===");
-      console.error("Error:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error stack:", error?.stack);
+      logger.error("Upload error:", error?.message);
       throw new Error(error?.message || "Failed to upload image to storage");
     }
   };
@@ -212,7 +152,7 @@ const useImageUpload = () => {
     options: ImageUploadOptions
   ): Promise<string | null> => {
     try {
-      console.log("Starting image selection with options:", options);
+      logger.log("Starting image selection");
 
       // Step 1: Request permissions
       const hasPermission = await requestPermissions();
@@ -229,12 +169,11 @@ const useImageUpload = () => {
       });
 
       if (result.canceled) {
-        console.log("Image selection cancelled by user");
+        logger.log("Image selection cancelled");
         return null;
       }
 
       const imageUri = result.assets[0].uri;
-      console.log("Image selected:", imageUri);
 
       if (!imageUri) {
         throw new Error("No image URI received from picker");
@@ -248,10 +187,10 @@ const useImageUpload = () => {
         options.quality || 0.7
       );
 
-      console.log("Image compressed successfully:", compressedUri);
+      logger.log("Image compressed successfully");
       return compressedUri;
     } catch (error: any) {
-      console.error("Error in pickImage:", error);
+      logger.error("Error in pickImage");
       throw new Error(error?.message || "Failed to select image");
     }
   };
@@ -267,7 +206,7 @@ const useImageUpload = () => {
     options: ImageUploadOptions
   ): Promise<string> => {
     try {
-      console.log("Starting image upload:", imageUri);
+      logger.log("Starting image upload");
 
       if (!imageUri) {
         throw new Error("No image URI provided for upload");
@@ -284,7 +223,7 @@ const useImageUpload = () => {
       const folder = options.folder || "default";
       const filePath = `${user.id}/${folder}/${timestamp}`;
 
-      console.log("Uploading with file path:", filePath);
+      logger.log("Uploading image");
 
       // Upload to Supabase Storage
       const publicUrl = await uploadToStorage(
@@ -293,10 +232,10 @@ const useImageUpload = () => {
         filePath
       );
 
-      console.log("Image upload completed successfully:", publicUrl);
+      logger.log("Image upload completed");
       return publicUrl;
     } catch (error: any) {
-      console.error("Error in uploadImage:", error);
+      logger.error("Error in uploadImage");
       throw new Error(error?.message || "Failed to upload image");
     }
   };
@@ -309,7 +248,7 @@ const useImageUpload = () => {
     options: ImageUploadOptions
   ): Promise<string | null> => {
     try {
-      console.log("Starting image upload process with options:", options);
+      logger.log("Starting image upload process");
 
       // Pick and compress image
       const compressedUri = await pickImage(options);
@@ -321,7 +260,7 @@ const useImageUpload = () => {
       const publicUrl = await uploadImage(compressedUri, options);
       return publicUrl;
     } catch (error) {
-      console.error("Error in pickAndUploadImage:", error);
+      logger.error("Error in pickAndUploadImage");
       throw error;
     }
   };
@@ -334,18 +273,16 @@ const useImageUpload = () => {
   const deleteImage = async (imageUrl: string): Promise<boolean> => {
     try {
       if (!imageUrl) {
-        console.log("No image URL provided for deletion");
         return false;
       }
 
-      console.log("=== Starting Image Deletion ===");
-      console.log("Image URL:", imageUrl);
+      logger.log("Starting image deletion");
 
       // Extract bucket and file path from URL
       // URL format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[filepath]
       const urlParts = imageUrl.split('/storage/v1/object/public/');
       if (urlParts.length < 2) {
-        console.error("Invalid image URL format");
+        logger.error("Invalid image URL format");
         return false;
       }
 
@@ -353,25 +290,21 @@ const useImageUpload = () => {
       const bucket = pathParts[0];
       const filePath = pathParts.slice(1).join('/');
 
-      console.log("Bucket:", bucket);
-      console.log("File path:", filePath);
-
       // Delete from Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
         .remove([filePath]);
 
       if (error) {
-        console.error("Error deleting image from storage:", error);
+        logger.error("Error deleting image from storage");
         // Don't throw error - we don't want to block event deletion if image delete fails
         return false;
       }
 
-      console.log("Image deleted successfully:", data);
-      console.log("=== Image Deletion Complete ===");
+      logger.log("Image deleted successfully");
       return true;
     } catch (error: any) {
-      console.error("Error in deleteImage:", error);
+      logger.error("Error in deleteImage");
       // Don't throw - just log and return false
       return false;
     }

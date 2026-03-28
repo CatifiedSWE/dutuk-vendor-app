@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import placeholderImage from "@/assets/avatar.jpg";
 import UnifiedCalendar from '@/components/UnifiedCalendar';
 import getCount from "@/hooks/companyRequests/getRequestsCount";
@@ -65,7 +66,7 @@ const Home = () => {
         setRequests(typeof count === "number" ? count : 0);
       }
     } catch (error) {
-      console.error('Failed to load requests count:', error);
+      logger.error('Failed to load requests count:', error);
       setRequests(0);
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ const Home = () => {
       const merged = mergeAvailabilityWithEvents(availabilityMarked, eventMarked);
       setMarkedDates(merged);
     } catch (error) {
-      console.error('Failed to load events:', error);
+      logger.error('Failed to load events:', error);
     }
   };
 
@@ -111,7 +112,7 @@ const Home = () => {
         setProfileImageUrl(companyInfo.logo_url);
       }
     } catch (error) {
-      console.error('Failed to load profile image:', error);
+      logger.error('Failed to load profile image:', error);
     }
   };
 
@@ -124,7 +125,7 @@ const Home = () => {
   };
 
   const handleImageLoadError = (eventId: string) => {
-    console.error(`Failed to load image for event ${eventId}`);
+    logger.error(`Failed to load image for event ${eventId}`);
     setImageLoadingStates(prev => ({ ...prev, [eventId]: false }));
   };
 
@@ -145,7 +146,7 @@ const Home = () => {
         setPendingInquiries(count);
       }
     } catch (error) {
-      console.error('Failed to load inquiries count:', error);
+      logger.error('Failed to load inquiries count:', error);
     }
   };
 
@@ -160,7 +161,7 @@ const Home = () => {
         loadInquiriesCount()
       ]);
     } catch (error) {
-      console.error('Failed to refresh data:', error);
+      logger.error('Failed to refresh data:', error);
     } finally {
       setRefreshing(false);
     }

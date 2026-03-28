@@ -1,9 +1,10 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 const removeRequest = async(id:number)=>{
     const {error:err} = await supabase.from("requests").delete().eq("id",id);
     if(err){
-        console.log(err);
+        logger.log(err);
         return false;
     }
     else{

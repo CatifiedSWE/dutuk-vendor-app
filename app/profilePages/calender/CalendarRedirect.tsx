@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // BACKEND INTEGRATION COMMENTED OUT - USING ASYNCSTORAGE FOR LOCAL STORAGE
 import AuthButton from "@/components/AuthButton";
 import EditableInputField from "@/components/EditableInputField";
@@ -39,7 +40,7 @@ const CalendarRedirect=()=>{
             position: 'bottom',
           });
         } catch (error) {
-          console.error('Error saving date info:', error);
+          logger.error('Error saving date info:', error);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -63,7 +64,7 @@ const CalendarRedirect=()=>{
             setEventName(dateInfo.event || "");
           }
         } catch (error) {
-          console.error('Error loading date info:', error);
+          logger.error('Error loading date info:', error);
         }
     }
 

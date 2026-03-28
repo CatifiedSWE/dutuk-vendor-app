@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Dutuk Vendor",
+    "slug": "dutukfrontend",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "dutukfrontend",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vendorapp.dutuk",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Access photos and videos to showcase your work",
+        "NSPhotoLibraryAddUsageDescription": "Save media to your photo library",
+        "NSCameraUsageDescription": "Take photos and videos of your work",
+        "NSMicrophoneUsageDescription": "Record audio for your videos"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FDFDFD"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.vendorapp.dutuk",
+      "versionCode": 9,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FDFDFD"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "root": "src/app"
+      },
+      "eas": {
+        "projectId": "eddf2984-5d28-45ae-a8c7-d80d9a690325"
+      }
+    }
+  }
+}

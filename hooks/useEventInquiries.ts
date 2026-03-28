@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 
 export interface EventInquiry {
@@ -47,7 +48,7 @@ export const getVendorInquiries = async (vendorProfileId: string): Promise<Event
 
         return inquiries || [];
     } catch (err) {
-        console.error('Error fetching vendor inquiries:', err);
+        logger.error('Error fetching vendor inquiries:', err);
         return [];
     }
 };
@@ -77,7 +78,7 @@ export const getPendingInquiries = async (vendorProfileId: string): Promise<Even
 
         return inquiries || [];
     } catch (err) {
-        console.error('Error fetching pending inquiries:', err);
+        logger.error('Error fetching pending inquiries:', err);
         return [];
     }
 };
@@ -109,7 +110,7 @@ export const getPendingInquiriesCount = async (vendorProfileId: string): Promise
     } catch (err: any) {
         // Only log meaningful errors, not empty ones
         if (err?.message) {
-            console.error('Error counting pending inquiries:', err.message);
+            logger.error('Error counting pending inquiries:', err.message);
         }
         return 0;
     }
@@ -132,7 +133,7 @@ export const acceptInquiry = async (inquiryId: string): Promise<boolean> => {
 
         return true;
     } catch (err) {
-        console.error('Error accepting inquiry:', err);
+        logger.error('Error accepting inquiry:', err);
         return false;
     }
 };
@@ -154,7 +155,7 @@ export const rejectInquiry = async (inquiryId: string): Promise<boolean> => {
 
         return true;
     } catch (err) {
-        console.error('Error rejecting inquiry:', err);
+        logger.error('Error rejecting inquiry:', err);
         return false;
     }
 };

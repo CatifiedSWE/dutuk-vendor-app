@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 /**
@@ -29,24 +30,24 @@ const checkUserExists = async (
       
       // If error mentions "invalid login credentials", user exists but password was wrong
       if (message.includes("invalid login credentials") || message.includes("invalid password")) {
-        console.log("User exists (invalid credentials error):", trimmedEmail);
+        logger.log("User exists (invalid credentials error):", trimmedEmail);
         return { exists: true, error: null };
       }
       
       // If error mentions "user not found" or "email not found", user doesn't exist
       if (message.includes("user not found") || message.includes("not found")) {
-        console.log("User does not exist:", trimmedEmail);
+        logger.log("User does not exist:", trimmedEmail);
         return { exists: false, error: null };
       }
       
       // For "email not confirmed", user exists but hasn't verified email
       if (message.includes("email not confirmed") || message.includes("not verified")) {
-        console.log("User exists but email not confirmed:", trimmedEmail);
+        logger.log("User exists but email not confirmed:", trimmedEmail);
         return { exists: true, error: null };
       }
       
       // Other errors - assume user doesn't exist to allow registration attempt
-      console.log("Ambiguous error, assuming user doesn't exist:", error);
+      logger.log("Ambiguous error, assuming user doesn't exist:", error);
       return { exists: false, error: null };
     }
 
@@ -59,7 +60,7 @@ const checkUserExists = async (
 
     return { exists: false, error: null };
   } catch (error) {
-    console.error("Unexpected error checking user existence:", error);
+    logger.error("Unexpected error checking user existence:", error);
     // On error, allow registration to proceed
     return { exists: false, error: null };
   }

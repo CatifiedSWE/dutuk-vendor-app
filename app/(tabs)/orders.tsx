@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getCompanyInfo from '@/hooks/useGetCompanyInfo';
 import { useOrders } from '@/hooks/useOrders';
 import { router } from 'expo-router';
@@ -31,7 +32,7 @@ const OrdersScreen = () => {
     try {
       await getOrders();
     } catch (error) {
-      console.error('Failed to load orders:', error);
+      logger.error('Failed to load orders:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -47,7 +48,7 @@ const OrdersScreen = () => {
         setProfileImageUrl(companyInfo.logo_url);
       }
     } catch (error) {
-      console.error('Failed to load profile image:', error);
+      logger.error('Failed to load profile image:', error);
     }
   };
 
@@ -68,7 +69,7 @@ const OrdersScreen = () => {
           <Pressable
             style={styles.headerIcon}
             onPress={() => {
-              console.log('Notifications pressed');
+              logger.log('Notifications pressed');
             }}
           >
             <Bell width={22} height={22} stroke="#1c1917" />

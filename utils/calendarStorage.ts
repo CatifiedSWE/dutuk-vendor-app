@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type CalendarDateStatus = 'available' | 'unavailable';
@@ -19,7 +20,7 @@ export const getCalendarDates = async (): Promise<CalendarDate[]> => {
     const jsonValue = await AsyncStorage.getItem(CALENDAR_STORAGE_KEY);
     return jsonValue != null ? JSON.parse(jsonValue) : [];
   } catch (error) {
-    console.error('Error reading calendar dates from AsyncStorage:', error);
+    logger.error('Error reading calendar dates from AsyncStorage:', error);
     return [];
   }
 };
@@ -32,7 +33,7 @@ export const saveCalendarDates = async (dates: CalendarDate[]): Promise<void> =>
     const jsonValue = JSON.stringify(dates);
     await AsyncStorage.setItem(CALENDAR_STORAGE_KEY, jsonValue);
   } catch (error) {
-    console.error('Error saving calendar dates to AsyncStorage:', error);
+    logger.error('Error saving calendar dates to AsyncStorage:', error);
   }
 };
 
@@ -59,7 +60,7 @@ export const setCalendarDate = async (
 
     await saveCalendarDates(dates);
   } catch (error) {
-    console.error('Error setting calendar date:', error);
+    logger.error('Error setting calendar date:', error);
   }
 };
 
@@ -72,7 +73,7 @@ export const removeCalendarDate = async (date: string): Promise<void> => {
     const filteredDates = dates.filter((d) => d.date !== date);
     await saveCalendarDates(filteredDates);
   } catch (error) {
-    console.error('Error removing calendar date:', error);
+    logger.error('Error removing calendar date:', error);
   }
 };
 
@@ -84,7 +85,7 @@ export const getCalendarDate = async (date: string): Promise<CalendarDate | null
     const dates = await getCalendarDates();
     return dates.find((d) => d.date === date) || null;
   } catch (error) {
-    console.error('Error getting calendar date:', error);
+    logger.error('Error getting calendar date:', error);
     return null;
   }
 };
@@ -108,7 +109,7 @@ export const toggleDateStatus = async (date: string): Promise<CalendarDateStatus
       return 'unavailable';
     }
   } catch (error) {
-    console.error('Error toggling date status:', error);
+    logger.error('Error toggling date status:', error);
     return 'unavailable';
   }
 };
@@ -130,6 +131,6 @@ export const clearAllCalendarDates = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(CALENDAR_STORAGE_KEY);
   } catch (error) {
-    console.error('Error clearing calendar dates:', error);
+    logger.error('Error clearing calendar dates:', error);
   }
 };

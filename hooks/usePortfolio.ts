@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
@@ -86,7 +87,7 @@ export const usePortfolio = () => {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
 
             if (authError || !user) {
-                console.error('Authentication error:', authError);
+                logger.error('Authentication error:', authError);
                 setLoading(false);
                 return;
             }
@@ -102,7 +103,7 @@ export const usePortfolio = () => {
                 .order('created_at', { ascending: false });
 
             if (fetchError) {
-                console.error('Failed to fetch portfolio:', fetchError);
+                logger.error('Failed to fetch portfolio:', fetchError);
                 setError(fetchError.message);
                 setLoading(false);
                 return;
@@ -111,7 +112,7 @@ export const usePortfolio = () => {
             setItems(data || []);
             setLoading(false);
         } catch (err) {
-            console.error('Error fetching portfolio:', err);
+            logger.error('Error fetching portfolio:', err);
             setError('Failed to load portfolio');
             setLoading(false);
         }
@@ -191,7 +192,7 @@ export const usePortfolio = () => {
             setItems((prev) => [data, ...prev]);
             return data;
         } catch (err: any) {
-            console.error('Error uploading image:', err);
+            logger.error('Error uploading image:', err);
             setError(err.message);
             return null;
         } finally {
@@ -299,7 +300,7 @@ export const usePortfolio = () => {
             setError(null); // Clear any previous errors
             return data;
         } catch (err: any) {
-            console.error('Error uploading video:', err);
+            logger.error('Error uploading video:', err);
 
             // Provide user-friendly error messages
             let errorMessage = 'Failed to upload video. Please try again.';
@@ -339,7 +340,7 @@ export const usePortfolio = () => {
             );
             return true;
         } catch (err: any) {
-            console.error('Error updating portfolio item:', err);
+            logger.error('Error updating portfolio item:', err);
             setError(err.message);
             return false;
         }
@@ -366,14 +367,14 @@ export const usePortfolio = () => {
                         await supabase.storage.from('portfolio').remove([path]);
                     }
                 } catch (e) {
-                    console.warn('Could not delete media from storage:', e);
+                    logger.warn('Could not delete media from storage:', e);
                 }
             }
 
             setItems((prev) => prev.filter((i) => i.id !== id));
             return true;
         } catch (err: any) {
-            console.error('Error deleting portfolio item:', err);
+            logger.error('Error deleting portfolio item:', err);
             setError(err.message);
             return false;
         }

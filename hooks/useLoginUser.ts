@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
@@ -34,7 +35,7 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
     }
 
     const trimmedEmail = userEmail.trim().toLowerCase();
-    console.log("Attempting login for:", trimmedEmail);
+    logger.log("Attempting login for:", trimmedEmail);
 
     // Attempt to sign in with password
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -43,7 +44,7 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
     });
 
     if (error) {
-      console.error("Login error:", error);
+      logger.error("Login error:", error.message);
       const msg = error.message.toLowerCase();
 
       // Handle specific error cases with user-friendly messages
@@ -91,7 +92,7 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
     }
 
     if (!data?.user) {
-      console.error("No user data returned after login");
+      logger.error("No user data returned after login");
       Toast.show({
         type: "error",
         text1: "Login Failed",
@@ -100,7 +101,7 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
       return;
     }
 
-    console.log("Login successful for user:", data.user.id);
+    logger.log("Login successful");
 
     // Verify user profile and company exist (edge case: user created outside this app)
     // Check if company entry exists
@@ -113,11 +114,11 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
     // If no company exists, this might be a user created outside the app
     // or registration didn't complete properly - create entries now
     if (!companyData) {
-      console.log("No company found for user, creating vendor profile...");
+      logger.log("No company found, creating vendor profile...");
       const roleSet = await setRole();
-      
+
       if (!roleSet) {
-        console.warn("Warning: Could not create user profile after login");
+        logger.warn("Warning: Could not create user profile after login");
         // Show info message but allow login
         Toast.show({
           type: "info",
@@ -136,7 +137,7 @@ const loginUser = async (userEmail: string, userPassword: string): Promise<void>
     // Navigate to home page
     router.replace("/(tabs)/home");
   } catch (err: any) {
-    console.error("Unexpected login error:", err);
+    logger.error("Unexpected login error:", err?.message);
     Toast.show({
       type: "error",
       text1: "Error",

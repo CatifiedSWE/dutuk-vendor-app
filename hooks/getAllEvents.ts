@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -16,13 +17,13 @@ const getAllEvents = async () => {
             .order("start_date", { ascending: true });
 
         if (error) {
-            console.error("Error fetching all events:", error);
+            logger.error("Error fetching all events:", error);
             return [];
         }
 
         return events || [];
     } catch (e) {
-        console.error("Exception fetching all events:", e);
+        logger.error("Exception fetching all events:", e);
         return [];
     }
 };

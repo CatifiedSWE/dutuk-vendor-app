@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from "expo-router";
 import Toast from 'react-native-toast-message';
+import logger from "../utils/logger";
 import { supabase } from "../utils/supabase";
 import setRole from "./setVendorAsRoleOnRegister";
 
@@ -11,7 +12,7 @@ import setRole from "./setVendorAsRoleOnRegister";
  * MVP: No email verification required - direct signup and auto-login
  * 
  * @param userEmail - User's email address
- * @param password - User's password (minimum 6 characters)
+ * @param password - User's password (minimum 8 characters)
  * @returns Promise<void>
  * @throws Error if registration fails
  */
@@ -27,18 +28,18 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
       throw new Error('Email is required');
     }
 
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
-        text2: 'Password must be at least 6 characters.'
+        text2: 'Password must be at least 8 characters.'
       });
-      throw new Error('Password must be at least 6 characters');
+      throw new Error('Password must be at least 8 characters');
     }
 
     const trimmedEmail = userEmail.trim().toLowerCase();
 
-    console.log("Attempting to register user:", trimmedEmail);
+    logger.log("Attempting to register user");
 
     // Set flag BEFORE signup so that onAuthStateChange in index.tsx
     // always knows this is a new user when it fires.
@@ -60,7 +61,7 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
     if (signUpError) {
       const message = signUpError.message.toLowerCase();
 
-      console.error("Registration error:", signUpError);
+      logger.error("Registration error:", signUpError.message);
 
       // Handle specific error cases with user-friendly messages
       if (message.includes("user already registered") || message.includes("already registered")) {
@@ -112,10 +113,10 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
       throw new Error('User data not returned from signup');
     }
 
-    console.log("User signed up successfully:", signUpData.user.id);
+    logger.log("User signed up successfully");
 
     // MVP: Auto-login after registration (no email verification)
-    console.log("Proceeding to auto-login after registration");
+    logger.log("Proceeding to auto-login after registration");
 
     // Set flag to indicate this is a new user signup (for onboarding redirect)
     await AsyncStorage.setItem('isNewUserSignup', 'true');
@@ -127,7 +128,7 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
     });
 
     if (signInError) {
-      console.error("Auto-login error after registration:", signInError);
+      logger.error("Auto-login error after registration");
       // Clear flag since auto-login failed
       await AsyncStorage.removeItem('isNewUserSignup');
       Toast.show({
@@ -137,12 +138,12 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
       });
       router.replace('/auth/UserLogin');
     } else {
-      console.log("Auto-login successful");
+      logger.log("Auto-login successful");
 
       // Set vendor role and create company entry for the new user
       const roleSet = await setRole();
       if (!roleSet) {
-        console.warn("Warning: Failed to set vendor role, but continuing login");
+        logger.warn("Warning: Failed to set vendor role, but continuing login");
       }
 
       // Do NOT manually redirect here. The onAuthStateChange listener in
@@ -155,7 +156,7 @@ const registerUser = async (userEmail: string, password: string): Promise<void> 
       });
     }
   } catch (error) {
-    console.error("Unexpected error during registration:", error);
+    logger.error("Unexpected error during registration");
     // Error toast already shown in specific error handlers
     throw error;
   }

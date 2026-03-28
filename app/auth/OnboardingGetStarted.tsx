@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -34,7 +35,7 @@ const OnboardingGetStarted = () => {
           .eq("user_id", user.id);
 
         if (error) {
-          console.error("Error updating company name:", error);
+          logger.error("Error updating company name:", error);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -48,7 +49,7 @@ const OnboardingGetStarted = () => {
       // Navigate to categories onboarding step
       router.push('/auth/OnboardingCategories');
     } catch (error) {
-      console.error("Error in onboarding:", error);
+      logger.error("Error in onboarding:", error);
       Toast.show({
         type: 'error',
         text1: 'Error',

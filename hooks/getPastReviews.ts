@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -5,7 +6,7 @@ const getPastReviews = async () => {
     try {
         const user = await getUser();
         if (!user) {
-            console.error("No authenticated user");
+            logger.error("No authenticated user");
             return [];
         }
 
@@ -16,13 +17,13 @@ const getPastReviews = async () => {
             .order("created_at", { ascending: false });
 
         if (error) {
-            console.error("Error fetching past reviews:", error);
+            logger.error("Error fetching past reviews:", error);
             return [];
         }
 
         return reviews || [];
     } catch (e) {
-        console.error("Exception fetching past reviews:", e);
+        logger.error("Exception fetching past reviews:", e);
         return [];
     }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 const getCompanyInfo = async() =>{
@@ -9,7 +10,7 @@ const getCompanyInfo = async() =>{
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError);
+      logger.error("Authentication error:", authError);
       return;
     }
     const userId = user.id;
@@ -22,7 +23,7 @@ const getCompanyInfo = async() =>{
         .single();
     
     if (fetchError && fetchError.code !== "PGRST116") {
-        console.error("Error fetching company info:", fetchError);
+        logger.error("Error fetching company info:", fetchError);
         return;
     }
     else{
@@ -30,7 +31,7 @@ const getCompanyInfo = async() =>{
     }
 }
     catch(e){
-        console.error(e);
+        logger.error(e);
     }
 }
 export default getCompanyInfo;

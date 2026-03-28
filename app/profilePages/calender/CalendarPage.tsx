@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // BACKEND INTEGRATION ENABLED - USING SUPABASE FOR DATABASE SYNC
 import getStoredDates, { StoredDate } from "@/hooks/getStoredDates";
 import { DateStatus, removeDate, storeDateWithStatus } from "@/hooks/useStoreDates";
@@ -26,11 +27,11 @@ const CalendarPage = () => {
   const getDates = async () => {
     try {
       const storedDates = await getStoredDates();
-      console.log('Loaded dates from Supabase:', storedDates);
+      logger.log('Loaded dates from Supabase:', storedDates);
       setCalendarDates(storedDates || []);
       setAllowed(true);
     } catch (error) {
-      console.error('Error loading dates:', error);
+      logger.error('Error loading dates:', error);
       setAllowed(true);
     }
   };

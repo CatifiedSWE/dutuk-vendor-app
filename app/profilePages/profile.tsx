@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from '@expo/vector-icons';
@@ -65,7 +66,7 @@ const ProfileScreen = () => {
         });
       }
     } catch (error) {
-      console.error("Failed to load company info:", error);
+      logger.error("Failed to load company info:", error);
       Toast.show({
         type: 'error',
         text1: 'Error',

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -52,7 +53,7 @@ const OnboardingCategories = () => {
           .order("display_order", { ascending: true });
 
         if (error) {
-          console.error("Error fetching categories:", error);
+          logger.error("Error fetching categories:", error);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -65,7 +66,7 @@ const OnboardingCategories = () => {
           setCategories(data);
         }
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        logger.error("Error fetching categories:", error);
       } finally {
         setFetching(false);
       }
@@ -97,7 +98,7 @@ const OnboardingCategories = () => {
           .eq("user_id", user.id);
 
         if (error) {
-          console.error("Error updating categories:", error);
+          logger.error("Error updating categories:", error);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -111,7 +112,7 @@ const OnboardingCategories = () => {
       // Navigate to location onboarding step
       router.push('/auth/OnboardingLocation');
     } catch (error) {
-      console.error("Error in onboarding:", error);
+      logger.error("Error in onboarding:", error);
       Toast.show({
         type: 'error',
         text1: 'Error',

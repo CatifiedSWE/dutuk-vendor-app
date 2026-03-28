@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import createEvent from "@/hooks/createEvent";
 import useImageUpload from "@/hooks/useImageUpload";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,7 +52,7 @@ const CreateEventScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to select event image:", error);
+      logger.error("Failed to select event image:", error);
       Toast.show({
         type: 'error',
         text1: 'Selection Failed',
@@ -92,7 +93,7 @@ const CreateEventScreen = () => {
       if (imageUrl) {
         // Delete old image from storage if it exists (user is replacing image)
         if (oldImageUrl) {
-          console.log("Deleting old image:", oldImageUrl);
+          logger.log("Deleting old image:", oldImageUrl);
           await deleteImage(oldImageUrl);
         }
 
@@ -105,7 +106,7 @@ const CreateEventScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to upload event image:", error);
+      logger.error("Failed to upload event image:", error);
       Toast.show({
         type: 'error',
         text1: 'Upload Failed',
@@ -133,7 +134,7 @@ const CreateEventScreen = () => {
           onPress: async () => {
             try {
               // Delete from storage
-              console.log("Removing image from storage:", eventImageUrl);
+              logger.log("Removing image from storage:", eventImageUrl);
               await deleteImage(eventImageUrl);
               
               setEventImageUrl(null);
@@ -143,7 +144,7 @@ const CreateEventScreen = () => {
                 text2: 'Event image has been removed.'
               });
             } catch (error) {
-              console.error("Error removing image:", error);
+              logger.error("Error removing image:", error);
               Toast.show({
                 type: 'error',
                 text1: 'Error',

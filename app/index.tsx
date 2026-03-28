@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
@@ -20,14 +21,14 @@ export default function Index() {
           // User is already logged in, redirect to home.
           // The onAuthStateChange listener will NOT be active yet
           // for this initial check, so a dedicated flag check isn't needed here.
-          console.log("Existing session found, redirecting to home");
+          logger.log("Existing session found, redirecting to home");
           router.replace("/(tabs)/home");
         } else {
           // No session, show welcome screen
           setIsCheckingAuth(false);
         }
       } catch (error) {
-        console.error("Error checking session:", error);
+        logger.error("Error checking session:", error);
         setIsCheckingAuth(false);
       }
     };
@@ -49,11 +50,11 @@ export default function Index() {
           if (isNewUser === 'true') {
             // Clear the flag and redirect to onboarding
             await AsyncStorage.removeItem('isNewUserSignup');
-            console.log("New user signup, redirecting to onboarding");
+            logger.log("New user signup, redirecting to onboarding");
             router.replace('/auth/OnboardingGetStarted');
           } else {
             // Existing user login, redirect to home
-            console.log("User logged in, redirecting to home");
+            logger.log("User logged in, redirecting to home");
             router.replace("/(tabs)/home");
           }
         } finally {

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 import { supabase } from "@/utils/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -81,7 +82,7 @@ const OnboardingLocation = () => {
         });
       }
     } catch (error) {
-      console.error("Error getting location:", error);
+      logger.error("Error getting location:", error);
       Toast.show({
         type: 'error',
         text1: 'Location Error',
@@ -107,7 +108,7 @@ const OnboardingLocation = () => {
           .eq("user_id", user.id);
 
         if (error) {
-          console.error("Error updating location:", error);
+          logger.error("Error updating location:", error);
           Toast.show({
             type: 'error',
             text1: 'Error',
@@ -126,7 +127,7 @@ const OnboardingLocation = () => {
 
       router.replace('/(tabs)/home');
     } catch (error) {
-      console.error("Error in onboarding:", error);
+      logger.error("Error in onboarding:", error);
       router.replace('/(tabs)/home');
     } finally {
       setLoading(false);

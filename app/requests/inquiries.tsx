@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import {
     acceptInquiry,
     EventInquiry,
@@ -48,7 +49,7 @@ const InquiriesScreen = () => {
 
             setInquiries(data);
         } catch (err) {
-            console.error("Error loading inquiries:", err);
+            logger.error("Error loading inquiries:", err);
         } finally {
             setLoading(false);
             setRefreshing(false);

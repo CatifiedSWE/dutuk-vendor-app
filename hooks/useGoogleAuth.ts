@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
@@ -16,10 +17,10 @@ WebBrowser.maybeCompleteAuthSession();
  */
 const googleLogin = async (): Promise<void> => {
   try {
-    console.log("Initiating Google OAuth login");
-    
+    logger.log("Initiating Google OAuth login");
+
     const redirectUrl = Linking.createURL("auth/callback");
-    console.log("Redirect URL:", redirectUrl);
+    logger.log("Redirect URL configured");
 
     // Initiate OAuth flow with Google
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -35,7 +36,7 @@ const googleLogin = async (): Promise<void> => {
     });
 
     if (error) {
-      console.error("OAuth initiation error:", error.message);
+      logger.error("OAuth initiation error");
       Toast.show({
         type: 'error',
         text1: 'Google Sign-In Failed',
@@ -46,7 +47,7 @@ const googleLogin = async (): Promise<void> => {
 
     const authUrl = data?.url;
     if (!authUrl) {
-      console.error("No auth URL returned from Supabase");
+      logger.error("No auth URL returned");
       Toast.show({
         type: 'error',
         text1: 'Authentication Error',
@@ -55,14 +56,14 @@ const googleLogin = async (): Promise<void> => {
       return;
     }
 
-    console.log("Opening Google authentication in browser");
+    logger.log("Opening Google authentication in browser");
 
     // Open Google auth in browser
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
 
     if (result.type !== "success" || !result.url) {
-      console.warn("Auth session cancelled or failed:", result.type);
-      
+      logger.warn("Auth session cancelled or failed");
+
       if (result.type === "cancel") {
         Toast.show({
           type: 'info',
@@ -84,7 +85,7 @@ const googleLogin = async (): Promise<void> => {
     const code = url.searchParams.get("code");
 
     if (!code) {
-      console.error("No auth code returned in redirect URL");
+      logger.error("No auth code returned in redirect URL");
       Toast.show({
         type: 'error',
         text1: 'Authentication Error',
@@ -93,7 +94,7 @@ const googleLogin = async (): Promise<void> => {
       return;
     }
 
-    console.log("Authorization code received, exchanging for session");
+    logger.log("Authorization code received, exchanging for session");
 
     // Exchange authorization code for session
     let sessionError;
@@ -102,7 +103,7 @@ const googleLogin = async (): Promise<void> => {
       const response = await (supabase.auth.exchangeCodeForSession as any)(
         supabase.auth.exchangeCodeForSession.length === 1 ? code : { code }
       );
-      
+
       sessionError = response.error;
       sessionData = response.data;
     } catch (err) {
@@ -110,7 +111,7 @@ const googleLogin = async (): Promise<void> => {
     }
 
     if (sessionError) {
-      console.error("Session exchange error:", sessionError);
+      logger.error("Session exchange error");
       Toast.show({
         type: 'error',
         text1: 'Session Error',
@@ -120,7 +121,7 @@ const googleLogin = async (): Promise<void> => {
     }
 
     if (!sessionData?.session) {
-      console.error("No session data returned");
+      logger.error("No session data returned");
       Toast.show({
         type: 'error',
         text1: 'Authentication Error',
@@ -129,7 +130,7 @@ const googleLogin = async (): Promise<void> => {
       return;
     }
 
-    console.log("Session established successfully");
+    logger.log("Session established successfully");
 
     const userId = sessionData.session?.user?.id;
 
@@ -144,32 +145,30 @@ const googleLogin = async (): Promise<void> => {
     // PGRST116 means no rows found - this is a new user
     const isNewUser = companyCheckError?.code === "PGRST116" || !existingCompany;
 
-    console.log("Is new user:", isNewUser);
+    logger.log("Is new user:", isNewUser);
 
     // Only call setRole for NEW users (first time registration via Google)
     if (isNewUser) {
-      console.log("New Google OAuth user detected, creating vendor profile and company entry");
-      
+      logger.log("New Google OAuth user detected, creating vendor profile");
+
       // Extract user's name from Google account metadata
-      const googleUserName = sessionData.session?.user?.user_metadata?.full_name || 
-                            sessionData.session?.user?.user_metadata?.name || 
-                            null;
-      
-      console.log("Google user name:", googleUserName);
+      const googleUserName = sessionData.session?.user?.user_metadata?.full_name ||
+        sessionData.session?.user?.user_metadata?.name ||
+        null;
 
       // Create company entry for new users from this app
       // Pass the Google user's name as default company name
       const roleSet = await setRole(googleUserName);
-      
+
       if (!roleSet) {
-        console.warn("Warning: Failed to create company entry for new Google OAuth user");
+        logger.warn("Warning: Failed to create company entry for new Google OAuth user");
         Toast.show({
           type: 'info',
           text1: 'Account Created',
           text2: 'Welcome! If you experience any issues, please contact support.'
         });
       } else {
-        console.log("Successfully created vendor profile and company entry for new user");
+        logger.log("Successfully created vendor profile for new user");
       }
 
       // Show welcome message for new users
@@ -178,24 +177,24 @@ const googleLogin = async (): Promise<void> => {
         text1: 'Welcome to Dutuk!',
         text2: 'Your vendor account has been created.'
       });
-      
+
       // Redirect new Google users to onboarding
       router.replace("/auth/OnboardingGetStarted");
     } else {
-      console.log("Existing Google OAuth user, skipping vendor profile creation");
-      
+      logger.log("Existing Google OAuth user, skipping vendor profile creation");
+
       // Show welcome back message for existing users
       Toast.show({
         type: 'success',
         text1: 'Welcome Back!',
         text2: 'Successfully signed in.'
       });
-      
+
       // Existing users go directly to home
       router.replace("/(tabs)/home");
     }
   } catch (err) {
-    console.error("Unexpected Google OAuth error:", err);
+    logger.error("Unexpected Google OAuth error");
     Toast.show({
       type: 'error',
       text1: 'Error',

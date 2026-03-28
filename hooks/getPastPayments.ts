@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -5,7 +6,7 @@ const getPastPayments = async () => {
     try {
         const user = await getUser();
         if (!user) {
-            console.error("No authenticated user");
+            logger.error("No authenticated user");
             return [];
         }
 
@@ -17,13 +18,13 @@ const getPastPayments = async () => {
             .order("payment_date", { ascending: false });
 
         if (error) {
-            console.error("Error fetching past payments:", error);
+            logger.error("Error fetching past payments:", error);
             return [];
         }
 
         return payments || [];
     } catch (e) {
-        console.error("Exception fetching past payments:", e);
+        logger.error("Exception fetching past payments:", e);
         return [];
     }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 type CompanyInfoType = {
@@ -27,7 +28,7 @@ const useCompanyInfo = async ({
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError);
+      logger.error("Authentication error:", authError);
       return;
     }
 
@@ -41,7 +42,7 @@ const useCompanyInfo = async ({
       .single();
 
     if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("Error fetching company info:", fetchError);
+      logger.error("Error fetching company info:", fetchError);
       return;
     }
 
@@ -65,9 +66,9 @@ const useCompanyInfo = async ({
         .eq("user_id", userId);
 
       if (updateError) {
-        console.error("Error updating company info:", updateError);
+        logger.error("Error updating company info:", updateError);
       } else {
-        console.log("Company info updated.");
+        logger.log("Company info updated.");
       }
     } else {
       // Insert new company info
@@ -93,13 +94,13 @@ const useCompanyInfo = async ({
       const { error: insertError } = await supabase.from("companies").insert([insertData]);
 
       if (insertError) {
-        console.error("Error inserting company info:", insertError);
+        logger.error("Error inserting company info:", insertError);
       } else {
-        console.log("Company info inserted.");
+        logger.log("Company info inserted.");
       }
     }
   } catch (error) {
-    console.error("Unexpected error in useCompanyInfo:", error);
+    logger.error("Unexpected error in useCompanyInfo:", error);
   }
 };
 

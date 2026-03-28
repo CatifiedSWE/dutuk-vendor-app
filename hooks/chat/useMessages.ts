@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
@@ -124,7 +125,7 @@ export function useMessages(conversationId: string | null, paymentCompleted: boo
 
             setMessages(data || []);
         } catch (err: any) {
-            console.error('Error fetching messages:', err);
+            logger.error('Error fetching messages:', err);
             setError(err.message || 'Failed to load messages');
         } finally {
             setLoading(false);
@@ -248,7 +249,7 @@ export function useSendMessage() {
 
                 return { success: true };
             } catch (err: any) {
-                console.error('Error sending message:', err);
+                logger.error('Error sending message:', err);
                 const errorMsg = err.message || 'Failed to send message';
                 setError(errorMsg);
                 return { success: false, error: errorMsg };
@@ -294,7 +295,7 @@ export function useMarkAsRead() {
 
             if (error) throw error;
         } catch (err) {
-            console.error('Error marking messages as read:', err);
+            logger.error('Error marking messages as read:', err);
         } finally {
             setLoading(false);
         }

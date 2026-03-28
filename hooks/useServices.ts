@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -45,7 +46,7 @@ export const useServices = () => {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
 
             if (authError || !user) {
-                console.error('Authentication error:', authError);
+                logger.error('Authentication error');
                 setLoading(false);
                 return;
             }
@@ -60,7 +61,7 @@ export const useServices = () => {
                 .order('created_at', { ascending: false });
 
             if (fetchError) {
-                console.error('Failed to fetch services:', fetchError);
+                logger.error('Failed to fetch services');
                 setError(fetchError.message);
                 setLoading(false);
                 return;
@@ -69,7 +70,7 @@ export const useServices = () => {
             setServices(data || []);
             setLoading(false);
         } catch (err) {
-            console.error('Error fetching services:', err);
+            logger.error('Error fetching services');
             setError('Failed to load services');
             setLoading(false);
         }
@@ -105,7 +106,7 @@ export const useServices = () => {
             setServices((prev) => [...prev, data]);
             return data;
         } catch (err: any) {
-            console.error('Error creating service:', err);
+            logger.error('Error creating service');
             setError(err.message);
             return null;
         }
@@ -120,7 +121,8 @@ export const useServices = () => {
                     ...params,
                     updated_at: new Date().toISOString(),
                 })
-                .eq('id', id);
+                .eq('id', id)
+                .eq('vendor_id', userId);
 
             if (updateError) throw updateError;
 
@@ -129,7 +131,7 @@ export const useServices = () => {
             );
             return true;
         } catch (err: any) {
-            console.error('Error updating service:', err);
+            logger.error('Error updating service');
             setError(err.message);
             return false;
         }
@@ -141,14 +143,15 @@ export const useServices = () => {
             const { error: deleteError } = await supabase
                 .from('services')
                 .delete()
-                .eq('id', id);
+                .eq('id', id)
+                .eq('vendor_id', userId);
 
             if (deleteError) throw deleteError;
 
             setServices((prev) => prev.filter((s) => s.id !== id));
             return true;
         } catch (err: any) {
-            console.error('Error deleting service:', err);
+            logger.error('Error deleting service');
             setError(err.message);
             return false;
         }

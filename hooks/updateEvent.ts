@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -41,7 +42,7 @@ const updateEvent = async (eventId: string, payload: UpdateEventPayload) => {
 
     return data;
   } catch (error) {
-    console.error("Error updating event:", error);
+    logger.error("Error updating event:", error);
     throw error;
   }
 };

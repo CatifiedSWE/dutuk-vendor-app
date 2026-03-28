@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -56,7 +57,7 @@ export const useOrders = () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Authentication error:', authError);
+        logger.error('Authentication error');
         setLoading(false);
         return [];
       }
@@ -71,7 +72,7 @@ export const useOrders = () => {
         .order('created_at', { ascending: false });
 
       if (fetchError) {
-        console.error('Failed to fetch orders:', fetchError);
+        logger.error('Failed to fetch orders');
         setLoading(false);
         return [];
       }
@@ -83,7 +84,7 @@ export const useOrders = () => {
       setLoading(false);
       return transformedOrders;
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
+      logger.error('Failed to fetch orders');
       setLoading(false);
       return [];
     }
@@ -93,7 +94,7 @@ export const useOrders = () => {
   useEffect(() => {
     if (!userId) return;
 
-    console.log('Setting up orders real-time subscription for vendor:', userId);
+    logger.log('Setting up orders real-time subscription');
     setSubscriptionError(null);
 
     const channel = supabase
@@ -107,7 +108,7 @@ export const useOrders = () => {
           filter: `vendor_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('New order received:', payload.new);
+          logger.log('New order received');
           const newOrder = transformOrder(payload.new, true);
           setOrders((prev) => [newOrder, ...prev]);
           setNewOrderCount((prev) => prev + 1);
@@ -122,7 +123,7 @@ export const useOrders = () => {
           filter: `vendor_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('Order updated:', payload.new);
+          logger.log('Order updated');
           const updatedOrder = transformOrder(payload.new, false);
           setOrders((prev) =>
             prev.map((order) =>
@@ -132,18 +133,18 @@ export const useOrders = () => {
         }
       )
       .subscribe((status, err) => {
-        console.log('Orders subscription status:', status);
+        logger.log('Orders subscription status:', status);
         if (status === 'CHANNEL_ERROR') {
-          console.error('Realtime subscription error:', err);
+          logger.error('Realtime subscription error');
           setSubscriptionError('Failed to connect to realtime updates');
         } else if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to orders realtime updates');
+          logger.log('Successfully subscribed to orders updates');
           setSubscriptionError(null);
         }
       });
 
     return () => {
-      console.log('Removing orders subscription');
+      logger.log('Removing orders subscription');
       supabase.removeChannel(channel);
     };
   }, [userId]);
@@ -162,7 +163,7 @@ export const useOrders = () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        console.error('Authentication error:', authError);
+        logger.error('Authentication error');
         setLoading(false);
         return false;
       }
@@ -176,7 +177,7 @@ export const useOrders = () => {
         .single();
 
       if (orderError || !orderData) {
-        console.error('Order not found:', orderError);
+        logger.error('Order not found');
         setLoading(false);
         return false;
       }
@@ -193,14 +194,14 @@ export const useOrders = () => {
         .select();
 
       if (error) {
-        console.error('Failed to update order status:', error);
+        logger.error('Failed to update order status');
         setLoading(false);
         return false;
       }
 
       // Check if order was found and updated
       if (!data || data.length === 0) {
-        console.error('Order not found or you do not have permission to update it');
+        logger.error('Order not found or insufficient permissions');
         setLoading(false);
         return false;
       }
@@ -228,7 +229,7 @@ export const useOrders = () => {
             });
 
           if (convError) {
-            console.error('Failed to create conversation:', convError);
+            logger.error('Failed to create conversation');
             // Don't fail the whole operation - order was still approved
           }
         } else {
@@ -242,7 +243,7 @@ export const useOrders = () => {
             .eq('id', existingConv.id);
 
           if (updateConvError) {
-            console.error('Failed to update conversation:', updateConvError);
+            logger.error('Failed to update conversation');
           }
         }
       }
@@ -257,7 +258,7 @@ export const useOrders = () => {
       setLoading(false);
       return true;
     } catch (error) {
-      console.error('Failed to update order status:', error);
+      logger.error('Failed to update order status');
       setLoading(false);
       return false;
     }

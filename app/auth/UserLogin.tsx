@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import googleLogin from "@/hooks/useGoogleAuth";
 import loginUser from "@/hooks/useLoginUser";
 import { router } from "expo-router";
@@ -35,10 +36,10 @@ const UserLogin = () => {
 
     setLoading(true);
     try {
-      console.log('Attempting login with:', email.trim().toLowerCase());
+      logger.log('Attempting login with:', email.trim().toLowerCase());
       await loginUser(email.trim().toLowerCase(), password.trim());
     } catch (error) {
-      console.error('Login error in component:', error);
+      logger.error('Login error in component:', error);
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 // Performance utilities for the app
 
 export const withTimeout = <T>(
@@ -40,7 +41,7 @@ export const measurePerformance = (label: string) => {
   return {
     end: () => {
       const duration = Date.now() - start;
-      console.log(`[Performance] ${label}: ${duration}ms`);
+      logger.log(`[Performance] ${label}: ${duration}ms`);
       return duration;
     }
   };

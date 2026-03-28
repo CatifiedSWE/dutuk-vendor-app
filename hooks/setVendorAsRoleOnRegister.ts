@@ -1,3 +1,4 @@
+import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -14,11 +15,11 @@ const setRole = async (companyName?: string | null): Promise<boolean> => {
     const user = await getUser();
 
     if (!user) {
-      console.error("No user found when attempting to create vendor profile");
+      logger.error("No user found when attempting to create vendor profile");
       return false;
     }
 
-    console.log("Setting up vendor profile for user:", user.id);
+    logger.log("Setting up vendor profile for user");
 
     // Step 1: Ensure user_profiles entry exists
     // Check if user profile already exists
@@ -30,14 +31,14 @@ const setRole = async (companyName?: string | null): Promise<boolean> => {
 
     // PGRST116 means "Result contains 0 rows" - this is expected for new users
     if (profileFetchError && profileFetchError.code !== "PGRST116") {
-      console.error("Unexpected fetch error from user_profiles:", profileFetchError);
+      logger.error("Unexpected fetch error from user_profiles:", profileFetchError.message);
       return false;
     }
 
     // If profile doesn't exist, create one
     if (!existingProfile) {
-      console.log("Creating new user_profiles entry for user:", user.id);
-      
+      logger.log("Creating new user_profiles entry");
+
       const { error: profileInsertError } = await supabase
         .from("user_profiles")
         .insert({
@@ -48,16 +49,16 @@ const setRole = async (companyName?: string | null): Promise<boolean> => {
       if (profileInsertError) {
         // Check if error is due to trigger already creating the profile (race condition)
         if (profileInsertError.code === "23505") {
-          console.log("User profile already exists (created by trigger), continuing...");
+          logger.log("User profile already exists (created by trigger), continuing...");
         } else {
-          console.error("Error inserting user_profiles entry:", profileInsertError);
+          logger.error("Error inserting user_profiles entry:", profileInsertError.message);
           return false;
         }
       } else {
-        console.log("Successfully created user_profiles entry for user:", user.id);
+        logger.log("Successfully created user_profiles entry");
       }
     } else {
-      console.log("User profile already exists:", existingProfile.role);
+      logger.log("User profile already exists");
     }
 
     // Step 2: Ensure companies entry exists
@@ -70,17 +71,17 @@ const setRole = async (companyName?: string | null): Promise<boolean> => {
 
     // PGRST116 means "Result contains 0 rows" - this is expected for new users
     if (companyFetchError && companyFetchError.code !== "PGRST116") {
-      console.error("Unexpected fetch error from companies:", companyFetchError);
+      logger.error("Unexpected fetch error from companies:", companyFetchError.message);
       return false;
     }
 
     // If company doesn't exist, create one
     if (!existingCompany) {
-      console.log("Creating new company entry for vendor user:", user.id);
-      
+      logger.log("Creating new company entry for vendor user");
+
       // Use provided company name or user's email as fallback
       const defaultCompanyName = companyName || user.user_metadata?.full_name || null;
-      
+
       const { error: companyInsertError } = await supabase
         .from("companies")
         .insert({
@@ -90,19 +91,19 @@ const setRole = async (companyName?: string | null): Promise<boolean> => {
         });
 
       if (companyInsertError) {
-        console.error("Error inserting company entry:", companyInsertError);
+        logger.error("Error inserting company entry");
         return false;
       }
 
-      console.log("Successfully created company entry for vendor:", user.id);
+      logger.log("Successfully created company entry for vendor");
       return true;
     }
 
     // Company already exists
-    console.log("Company entry already exists:", existingCompany.company);
+    logger.log("Company entry already exists");
     return true;
   } catch (error) {
-    console.error("Unexpected error in setRole:", error);
+    logger.error("Unexpected error in setRole");
     return false;
   }
 };

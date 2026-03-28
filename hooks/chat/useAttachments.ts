@@ -1,4 +1,5 @@
 import getUser from '@/hooks/getUser';
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -83,7 +84,7 @@ export function useAttachments() {
             }
             return null;
         } catch (err: any) {
-            console.error('Error picking image:', err);
+            logger.error('Error picking image:', err);
             setError(err.message || 'Failed to pick image');
             return null;
         }
@@ -122,7 +123,7 @@ export function useAttachments() {
             }
             return null;
         } catch (err: any) {
-            console.error('Error taking photo:', err);
+            logger.error('Error taking photo:', err);
             setError(err.message || 'Failed to take photo');
             return null;
         }
@@ -152,7 +153,7 @@ export function useAttachments() {
             }
             return null;
         } catch (err: any) {
-            console.error('Error picking document:', err);
+            logger.error('Error picking document:', err);
             setError(err.message || 'Failed to pick document');
             return null;
         }
@@ -166,6 +167,13 @@ export function useAttachments() {
 
         if (!fileToUpload) {
             setError('No attachment to upload');
+            return null;
+        }
+
+        // Validate file size (max 10MB)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        if (fileToUpload.size > MAX_FILE_SIZE) {
+            setError('File size must be under 10MB');
             return null;
         }
 
@@ -227,7 +235,7 @@ export function useAttachments() {
 
             return uploadedAttachment;
         } catch (err: any) {
-            console.error('Error uploading attachment:', err);
+            logger.error('Error uploading attachment:', err);
             setError(err.message || 'Failed to upload attachment');
             return null;
         } finally {

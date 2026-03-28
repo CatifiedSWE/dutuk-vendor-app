@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -25,7 +26,7 @@ const getEventById = async (eventId: string) => {
 
     return data;
   } catch (error) {
-    console.error("Error fetching event by id:", error);
+    logger.error("Error fetching event by id:", error);
     throw error;
   }
 };

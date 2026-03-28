@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -53,7 +54,7 @@ const OrdersScreen = () => {
             style={styles.headerIcon}
             onPress={() => {
               // Navigate to notifications or show notification panel
-              console.log('Notifications pressed');
+              logger.log('Notifications pressed');
             }}
           >
             <Bell width={24} height={24} stroke="#000000" />

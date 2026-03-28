@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -48,7 +49,7 @@ export const useVendorReviews = (limit?: number) => {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
 
             if (authError || !user) {
-                console.error('Authentication error:', authError);
+                logger.error('Authentication error:', authError);
                 setLoading(false);
                 return;
             }
@@ -69,7 +70,7 @@ export const useVendorReviews = (limit?: number) => {
             const { data: reviewsData, error: fetchError } = await query;
 
             if (fetchError) {
-                console.error('Failed to fetch reviews:', fetchError);
+                logger.error('Failed to fetch reviews:', fetchError);
                 setError(fetchError.message);
                 setLoading(false);
                 return;
@@ -106,7 +107,7 @@ export const useVendorReviews = (limit?: number) => {
 
             setLoading(false);
         } catch (err) {
-            console.error('Error fetching reviews:', err);
+            logger.error('Error fetching reviews:', err);
             setError('Failed to load reviews');
             setLoading(false);
         }
@@ -116,7 +117,7 @@ export const useVendorReviews = (limit?: number) => {
     useEffect(() => {
         if (!userId) return;
 
-        console.log('Setting up reviews real-time subscription for vendor:', userId);
+        logger.log('Setting up reviews real-time subscription for vendor:', userId);
 
         const channel = supabase
             .channel(`vendor-reviews-${userId}`)
@@ -129,7 +130,7 @@ export const useVendorReviews = (limit?: number) => {
                     filter: `vendor_id=eq.${userId}`,
                 },
                 (payload) => {
-                    console.log('New review received:', payload.new);
+                    logger.log('New review received:', payload.new);
                     const newReview = payload.new as Review;
                     setReviews((prev) => [newReview, ...prev]);
                     // Update stats
@@ -149,7 +150,7 @@ export const useVendorReviews = (limit?: number) => {
                 }
             )
             .subscribe((status) => {
-                console.log('Reviews subscription status:', status);
+                logger.log('Reviews subscription status:', status);
             });
 
         return () => {
@@ -203,7 +204,7 @@ export const useRespondToReview = () => {
 
             return true;
         } catch (err: any) {
-            console.error('Error responding to review:', err);
+            logger.error('Error responding to review:', err);
             setError(err.message || 'Failed to respond to review');
             return false;
         } finally {

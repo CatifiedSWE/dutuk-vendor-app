@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
@@ -27,7 +28,7 @@ const createSafeStorage = () => ({
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       return await AsyncStorage.getItem(key);
     } catch (error) {
-      console.warn('Storage getItem error:', error);
+      logger.warn('Storage getItem error:', error);
       return null;
     }
   },
@@ -41,7 +42,7 @@ const createSafeStorage = () => ({
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.setItem(key, value);
     } catch (error) {
-      console.warn('Storage setItem error:', error);
+      logger.warn('Storage setItem error:', error);
     }
   },
   removeItem: async (key: string): Promise<void> => {
@@ -54,7 +55,7 @@ const createSafeStorage = () => ({
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.removeItem(key);
     } catch (error) {
-      console.warn('Storage removeItem error:', error);
+      logger.warn('Storage removeItem error:', error);
     }
   },
 });

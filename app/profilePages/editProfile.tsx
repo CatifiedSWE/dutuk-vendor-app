@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 import useCompanyInfo from "@/hooks/useCompanyInfo";
 import getCompanyInfo from "@/hooks/useGetCompanyInfo";
@@ -61,7 +62,7 @@ const EditProfileScreen = () => {
         });
       }
     } catch (error) {
-      console.error("Failed to load company info:", error);
+      logger.error("Failed to load company info:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -93,7 +94,7 @@ const EditProfileScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to select profile image:", error);
+      logger.error("Failed to select profile image:", error);
       Toast.show({
         type: "error",
         text1: "Selection Failed",
@@ -153,7 +154,7 @@ const EditProfileScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to upload profile image:", error);
+      logger.error("Failed to upload profile image:", error);
       Toast.show({
         type: "error",
         text1: "Upload Failed",
@@ -199,7 +200,7 @@ const EditProfileScreen = () => {
       // Optionally go back after saving
       // router.back();
     } catch (error) {
-      console.error("Failed to save company info:", error);
+      logger.error("Failed to save company info:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -260,7 +261,7 @@ const EditProfileScreen = () => {
         });
       }
     } catch (error) {
-      console.error("Error getting location:", error);
+      logger.error("Error getting location:", error);
       Toast.show({
         type: "error",
         text1: "Location Error",

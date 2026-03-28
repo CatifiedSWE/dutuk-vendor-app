@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { PortfolioItem, usePortfolio } from '@/hooks/usePortfolio';
 import { toast, Toasts } from '@backpackapp-io/react-native-toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -100,7 +101,7 @@ const PortfolioPage = () => {
         } else if (status.error) {
             setVideoError(true);
             setVideoLoading(false);
-            console.error('Video error:', status.error);
+            logger.error('Video error:', status.error);
         }
     };
 
@@ -117,7 +118,7 @@ const PortfolioPage = () => {
                 }
             }
         } catch (error) {
-            console.error('Error toggling video playback:', error);
+            logger.error('Error toggling video playback:', error);
             toast.error('Failed to play video');
         }
     };
@@ -128,7 +129,7 @@ const PortfolioPage = () => {
             try {
                 await videoRef.current.pauseAsync();
             } catch (error) {
-                console.error('Error pausing video:', error);
+                logger.error('Error pausing video:', error);
             }
         }
         setShowDetailModal(false);
@@ -389,7 +390,7 @@ const PortfolioPage = () => {
                                         onPlaybackStatusUpdate={handleVideoPlaybackStatusUpdate}
                                         onLoadStart={() => setVideoLoading(true)}
                                         onError={(error) => {
-                                            console.error('Video playback error:', error);
+                                            logger.error('Video playback error:', error);
                                             setVideoError(true);
                                             setVideoLoading(false);
                                         }}

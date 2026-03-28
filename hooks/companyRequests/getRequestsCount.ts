@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 const getCount = async(id: string) => {
@@ -10,7 +11,7 @@ const getCount = async(id: string) => {
             .single();
 
         if (companyError || !companyData?.company) {
-            console.log("Company lookup error:", companyError);
+            logger.log("Company lookup error:", companyError);
             return 0;
         }
 
@@ -21,13 +22,13 @@ const getCount = async(id: string) => {
             .eq("company_name", companyData.company);
 
         if (requestsError) {
-            console.error("Requests count error:", requestsError);
+            logger.error("Requests count error:", requestsError);
             return 0;
         }
 
         return count || 0;
     } catch (error) {
-        console.error("Error getting requests count:", error);
+        logger.error("Error getting requests count:", error);
         return 0;
     }
 }

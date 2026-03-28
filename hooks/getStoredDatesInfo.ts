@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 type storeDatesInfoType = {
@@ -13,7 +14,7 @@ const getStoreDatesInfo= async(data:storeDatesInfoType)=>{
         } = await supabase.auth.getUser();
     
         if (authError || !user) {
-          console.error("Authentication error:", authError);
+          logger.error("Authentication error:", authError);
           return;
         }
         const userId = user.id;
@@ -24,18 +25,18 @@ const getStoreDatesInfo= async(data:storeDatesInfoType)=>{
         .eq("date",data.date);
 
         if(err){
-            console.error(err.message);
+            logger.error(err.message);
         }
         if(d!==null){
             return d[0];
         }
         else{
-            console.error("NO data found");
+            logger.error("NO data found");
         }
 
     }
     catch(e){
-        console.error(e);
+        logger.error(e);
     }
 }
 export default getStoreDatesInfo;

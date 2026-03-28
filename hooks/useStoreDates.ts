@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 export type DateStatus = 'available' | 'unavailable';
@@ -27,7 +28,7 @@ const storeDateWithStatus = async (
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError);
+      logger.error("Authentication error:", authError);
       return false;
     }
 
@@ -42,7 +43,7 @@ const storeDateWithStatus = async (
       .maybeSingle();
 
     if (fetchError) {
-      console.error("Error checking existing date:", fetchError);
+      logger.error("Error checking existing date:", fetchError);
       return false;
     }
 
@@ -60,10 +61,10 @@ const storeDateWithStatus = async (
         .eq("date", date);
 
       if (updateError) {
-        console.error("Error updating date:", updateError);
+        logger.error("Error updating date:", updateError);
         return false;
       }
-      console.log(`Date ${date} updated to ${status}`);
+      logger.log(`Date ${date} updated to ${status}`);
     } else {
       // Insert new date
       const { error: insertError } = await supabase.from("dates").insert([
@@ -77,15 +78,15 @@ const storeDateWithStatus = async (
       ]);
 
       if (insertError) {
-        console.error("Error inserting date:", insertError);
+        logger.error("Error inserting date:", insertError);
         return false;
       }
-      console.log(`Date ${date} inserted as ${status}`);
+      logger.log(`Date ${date} inserted as ${status}`);
     }
 
     return true;
   } catch (e) {
-    console.error("Error in storeDateWithStatus:", e);
+    logger.error("Error in storeDateWithStatus:", e);
     return false;
   }
 };
@@ -101,7 +102,7 @@ const removeDate = async (date: string): Promise<boolean> => {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError);
+      logger.error("Authentication error:", authError);
       return false;
     }
 
@@ -112,14 +113,14 @@ const removeDate = async (date: string): Promise<boolean> => {
       .eq("date", date);
 
     if (deleteError) {
-      console.error("Error removing date:", deleteError);
+      logger.error("Error removing date:", deleteError);
       return false;
     }
 
-    console.log(`Date ${date} removed successfully`);
+    logger.log(`Date ${date} removed successfully`);
     return true;
   } catch (e) {
-    console.error("Error in removeDate:", e);
+    logger.error("Error in removeDate:", e);
     return false;
   }
 };

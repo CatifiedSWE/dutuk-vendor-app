@@ -1,18 +1,19 @@
+import logger from '@/utils/logger';
 import getUser from "./getUser";
 
 const getProvider =async()=>{
     try{
         const user = await getUser();
-        if(!user) console.error("Cannot get User");
+        if(!user) logger.error("Cannot get User");
         else{
         const provider = user?.app_metadata.provider
-        if(!provider) console.error("Cannot get Provider");
+        if(!provider) logger.error("Cannot get Provider");
         else{
-        console.log("Provider:"+provider)
+        logger.log("Provider:"+provider)
         return provider}}
         }
         catch(e){
-            console.error(e);
+            logger.error(e);
         }
     }
     export default getProvider;

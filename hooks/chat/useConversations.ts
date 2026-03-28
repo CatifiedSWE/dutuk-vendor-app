@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
@@ -69,7 +70,7 @@ export function useVendorConversations() {
                 .rpc('get_unread_count', { user_id_param: vendorId });
 
             if (unreadError) {
-                console.warn('Error fetching unread counts:', unreadError);
+                logger.warn('Error fetching unread counts:', unreadError);
             }
 
             // Merge unread counts with conversations
@@ -83,7 +84,7 @@ export function useVendorConversations() {
 
             setConversations(conversationsWithUnread);
         } catch (err: any) {
-            console.error('Error fetching conversations:', err);
+            logger.error('Error fetching conversations:', err);
             setError(err.message || 'Failed to load conversations');
         } finally {
             setLoading(false);
@@ -102,7 +103,7 @@ export function useVendorConversations() {
                     setLoading(false);
                 }
             } catch (err) {
-                console.error('Error getting user:', err);
+                logger.error('Error getting user:', err);
                 setLoading(false);
             }
         };
@@ -203,7 +204,7 @@ export function useConversation(conversationId: string | null) {
 
                 setConversation(data);
             } catch (err: any) {
-                console.error('Error fetching conversation:', err);
+                logger.error('Error fetching conversation:', err);
                 setError(err.message || 'Failed to load conversation');
             } finally {
                 setLoading(false);

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 const getUser = async() => {
@@ -22,13 +23,13 @@ const getUser = async() => {
         ]) as any;
     
         if (authError) {
-            console.error("Authentication error:", authError);
+            logger.error("Authentication error:", authError);
             return null;
         }
     
         return user;
     } catch (error) {
-        console.error("Error getting user:", error);
+        logger.error("Error getting user:", error);
         return null;
     }        
 }

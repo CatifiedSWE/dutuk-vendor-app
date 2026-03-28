@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -5,7 +6,7 @@ const getPastEvents = async () => {
     try {
         const user = await getUser();
         if (!user) {
-            console.error("No authenticated user");
+            logger.error("No authenticated user");
             return [];
         }
 
@@ -17,13 +18,13 @@ const getPastEvents = async () => {
             .order("end_date", { ascending: false });
 
         if (error) {
-            console.error("Error fetching past events:", error);
+            logger.error("Error fetching past events:", error);
             return [];
         }
 
         return events || [];
     } catch (e) {
-        console.error("Exception fetching past events:", e);
+        logger.error("Exception fetching past events:", e);
         return [];
     }
 };

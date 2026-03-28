@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import deleteEvent from "@/hooks/deleteEvent";
 import getEventById from "@/hooks/getEventById";
 import updateEvent, { UpdateEventPayload } from "@/hooks/updateEvent";
@@ -132,7 +133,7 @@ const ManageEventScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to select event image:", error);
+      logger.error("Failed to select event image:", error);
       Toast.show({
         type: 'error',
         text1: 'Selection Failed',
@@ -173,12 +174,12 @@ const ManageEventScreen = () => {
       if (imageUrl) {
         // Delete old image from storage if it exists
         if (oldImageUrl) {
-          console.log("Deleting old image:", oldImageUrl);
+          logger.log("Deleting old image:", oldImageUrl);
           const deleted = await deleteImage(oldImageUrl);
           if (deleted) {
-            console.log("Old image deleted successfully");
+            logger.log("Old image deleted successfully");
           } else {
-            console.log("Could not delete old image (non-critical)");
+            logger.log("Could not delete old image (non-critical)");
           }
         }
 
@@ -197,7 +198,7 @@ const ManageEventScreen = () => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to upload event image:", error);
+      logger.error("Failed to upload event image:", error);
       Toast.show({
         type: 'error',
         text1: 'Upload Failed',
@@ -225,7 +226,7 @@ const ManageEventScreen = () => {
           onPress: async () => {
             try {
               // Delete from storage
-              console.log("Removing image from storage:", eventImageUrl);
+              logger.log("Removing image from storage:", eventImageUrl);
               await deleteImage(eventImageUrl);
               
               // Update database to remove image URL
@@ -238,7 +239,7 @@ const ManageEventScreen = () => {
                 text2: 'Event image has been removed.'
               });
             } catch (error) {
-              console.error("Error removing image:", error);
+              logger.error("Error removing image:", error);
               Toast.show({
                 type: 'error',
                 text1: 'Error',
@@ -329,12 +330,12 @@ const ManageEventScreen = () => {
             try {
               // Delete image from storage first if it exists
               if (eventImageUrl) {
-                console.log("Deleting event image from storage:", eventImageUrl);
+                logger.log("Deleting event image from storage:", eventImageUrl);
                 const deleted = await deleteImage(eventImageUrl);
                 if (deleted) {
-                  console.log("Event image deleted from storage");
+                  logger.log("Event image deleted from storage");
                 } else {
-                  console.log("Could not delete image from storage (will proceed with event deletion)");
+                  logger.log("Could not delete image from storage (will proceed with event deletion)");
                 }
               }
 
@@ -348,7 +349,7 @@ const ManageEventScreen = () => {
               });
               router.push("/(tabs)/home");
             } catch (error) {
-              console.error("Error deleting event:", error);
+              logger.error("Error deleting event:", error);
               Toast.show({
                 type: "error",
                 text1: "Delete failed",

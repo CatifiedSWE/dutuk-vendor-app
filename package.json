@@ -14,7 +14,8 @@
     "build:preview": "eas build --platform android --profile preview"
   },
   "overrides": {
-    "react-native-safe-area-context": "5.6.2"
+    "react-native-safe-area-context": "5.6.2",
+    "minimatch": "^10.2.4"
   },
   "dependencies": {
     "@backpackapp-io/react-native-toast": "^0.15.1",

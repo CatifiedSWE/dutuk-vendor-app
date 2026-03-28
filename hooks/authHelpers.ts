@@ -10,7 +10,7 @@
  */
 export const isValidEmail = (email: string): boolean => {
   if (!email || typeof email !== 'string') return false;
-  
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email.trim());
 };
@@ -25,14 +25,17 @@ export const validatePassword = (password: string): { valid: boolean; message: s
     return { valid: false, message: 'Password is required' };
   }
 
-  if (password.length < 6) {
-    return { valid: false, message: 'Password must be at least 6 characters long' };
+  if (password.length < 8) {
+    return { valid: false, message: 'Password must be at least 8 characters long' };
   }
 
-  // Optional: Add more strength requirements
-  // if (!/[A-Z]/.test(password)) {
-  //   return { valid: false, message: 'Password must contain at least one uppercase letter' };
-  // }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one uppercase letter' };
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Password must contain at least one number' };
+  }
 
   return { valid: true, message: 'Password is valid' };
 };
@@ -111,7 +114,7 @@ export const parseAuthError = (error: any): string => {
  */
 export const isAuthError = (error: any): boolean => {
   if (!error) return false;
-  
+
   const message = error.message?.toLowerCase() || '';
   const authKeywords = [
     'auth',

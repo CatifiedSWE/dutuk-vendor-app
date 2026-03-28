@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -106,7 +107,7 @@ const CustomerApprovalScreen = () => {
         });
       }
     } catch (error) {
-      console.error('Error accepting order:', error);
+      logger.error('Error accepting order:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -166,7 +167,7 @@ const CustomerApprovalScreen = () => {
                 });
               }
             } catch (error) {
-              console.error('Error rejecting order:', error);
+              logger.error('Error rejecting order:', error);
               Toast.show({
                 type: 'error',
                 text1: 'Error',

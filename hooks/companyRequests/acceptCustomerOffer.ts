@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
 type companyRequestProp = {
@@ -14,7 +15,7 @@ const acceptCustomerRequest = async(data:companyRequestProp)=>{
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         
         if (authError || !user) {
-            console.error("Authentication error:", authError);
+            logger.error("Authentication error:", authError);
             return false;
         }
         
@@ -31,15 +32,15 @@ const acceptCustomerRequest = async(data:companyRequestProp)=>{
             }
         ])
         if(err){
-            console.error("Error Accepting Offer: ",err);
+            logger.error("Error Accepting Offer: ",err);
             return false;
         }
         else{
-            console.log("Successfully Accepted offer");
+            logger.log("Successfully Accepted offer");
             return true;
         }
     } catch (error) {
-        console.error("Unexpected error accepting offer:", error);
+        logger.error("Unexpected error accepting offer:", error);
         return false;
     }
 }

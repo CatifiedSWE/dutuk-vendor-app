@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "../getUser";
 
@@ -14,10 +15,10 @@ const storeMultipleDates = async(dates:string[],event:string,description:string)
                 },
               ]);
               if (insertError) {
-                console.error("Error inserting Date:"+date+"\n"+ insertError);
+                logger.error("Error inserting Date:"+date+"\n"+ insertError);
                 return false;
               } else {
-                console.log("Date inserted."+date);
+                logger.log("Date inserted."+date);
               }
     })
     return true;

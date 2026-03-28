@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
 
@@ -24,7 +25,7 @@ const deleteEvent = async (eventId: string) => {
 
     return true;
   } catch (error) {
-    console.error("Error deleting event:", error);
+    logger.error("Error deleting event:", error);
     throw error;
   }
 };

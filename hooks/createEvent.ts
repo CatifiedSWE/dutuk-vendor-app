@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import { supabase } from "@/utils/supabase";
 import getUser from "./getUser";
@@ -63,7 +64,7 @@ const createEvent = async (payload: CreateEventPayload) => {
 
     return data;
   } catch (error) {
-    console.error("Error creating event:", error);
+    logger.error("Error creating event:", error);
     throw error;
   }
 };

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import getReqs from "@/hooks/companyRequests/getRequests";
 import getUser from "@/hooks/getUser";
 import { router, useFocusEffect } from "expo-router";
@@ -28,7 +29,7 @@ const RequestMenu = () => {
         }
       }
     } catch (err) {
-      console.error("Error loading requests:", err);
+      logger.error("Error loading requests:", err);
     } finally {
       setLoading(false);
     }
