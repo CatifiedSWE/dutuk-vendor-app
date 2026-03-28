@@ -1,33 +1,28 @@
 import DisplayReviews from "@/components/DisplayReviews";
-import getPastReviews from "@/hooks/getPastReviews";
-import { useEffect, useState } from "react";
+import { useVendorStore } from "@/store/useVendorStore";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 
-const PastReviews = ()=>{
-    const [data,setData] = useState<any|null>(null);
+const PastReviews = () => {
+    const data = useVendorStore((state) => state.reviews);
+    const fetchReviews = useVendorStore((state) => state.fetchReviews);
 
-    const getReviews = async()=>{
-        let temp=await getPastReviews();
-        if(typeof temp ==='object')
-            setData(temp);
-    }
-    useEffect(()=>{
-        getReviews();
-    },[]);
+    useEffect(() => {
+        fetchReviews();
+    }, []);
 
-    if(data!==null){
-
-    return(
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <DisplayReviews reviews={data} />
-        </View>
-    )
-    }
-    else{
-        return(
+    if (data && data.length > 0) {
+        return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text>Loading</Text>
-        </View>
+                <DisplayReviews reviews={data} />
+            </View>
+        )
+    }
+    else {
+        return (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <Text>Loading</Text>
+            </View>
         )
     }
 }
