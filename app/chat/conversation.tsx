@@ -2,7 +2,7 @@ import { getFileIcon, isImageType, useAttachments } from '@/hooks/chat/useAttach
 import { useConversation } from '@/hooks/chat/useConversations';
 import { Message, useMarkAsRead, useMessages, useSendMessage } from '@/hooks/chat/useMessages';
 import { useTypingIndicator } from '@/hooks/chat/useTypingIndicator';
-import getUser from '@/hooks/getUser';
+import { useAuthStore } from '@/store/useAuthStore';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -35,7 +35,7 @@ export default function ConversationScreen() {
     const paymentCompleted = paymentCompletedParam === 'true';
 
     const [message, setMessage] = useState('');
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const currentUserId = useAuthStore((state) => state.userId);
     const flatListRef = useRef<FlatList>(null);
 
     // Hooks
@@ -57,16 +57,6 @@ export default function ConversationScreen() {
         clearAttachment
     } = useAttachments();
 
-    // Get current user ID
-    useEffect(() => {
-        const fetchUser = async () => {
-            const user = await getUser();
-            if (user?.id) {
-                setCurrentUserId(user.id);
-            }
-        };
-        fetchUser();
-    }, []);
 
     // Mark messages as read when entering conversation
     useEffect(() => {

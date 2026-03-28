@@ -1,6 +1,7 @@
-import logger from '@/utils/logger';
 import getReqs from "@/hooks/companyRequests/getRequests";
-import getUser from "@/hooks/getUser";
+import { useAuthStore } from '@/store/useAuthStore';
+import logger from '@/utils/logger';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -11,7 +12,6 @@ import {
   Text,
   View
 } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RequestMenu = () => {
@@ -20,8 +20,7 @@ const RequestMenu = () => {
 
   const displayCount = async () => {
     try {
-      const user = await getUser();
-      const id = user?.id.toString();
+      const id = useAuthStore.getState().userId;
       if (id) {
         const req = await getReqs(id);
         if (req) {
@@ -43,7 +42,7 @@ const RequestMenu = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -77,7 +76,7 @@ const RequestMenu = () => {
                 </View>
                 <Text style={styles.cardTitle} numberOfLines={1}>{req.event}</Text>
               </View>
-              
+
               <View style={styles.cardFooter}>
                 <View style={styles.paymentContainer}>
                   <Ionicons name="cash-outline" size={18} color="#800000" />

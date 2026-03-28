@@ -52,8 +52,8 @@ export function usePushNotifications() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const notificationListener = useRef<Notifications.Subscription>();
-    const responseListener = useRef<Notifications.Subscription>();
+    const notificationListener = useRef<any>(null);
+    const responseListener = useRef<any>(null);
 
     // Register for push notifications
     const registerForPushNotifications = useCallback(async (): Promise<string | null> => {
