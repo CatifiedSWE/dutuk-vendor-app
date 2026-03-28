@@ -1,6 +1,5 @@
-import getPastEvents from "@/hooks/getPastEvents";
+import { useCompletedEvents, useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,26 +15,17 @@ type PastEvent = {
 };
 
 const PastEvents = () => {
-  const [events, setEvents] = useState<PastEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const events = useCompletedEvents();
+  const loading = useVendorStore((s) => s.eventsLoading);
+  const fetchEvents = useVendorStore((s) => s.fetchEvents);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getPastEvents();
-      setEvents(Array.isArray(data) ? data : []);
-    } catch (error) {
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents();
+    setRefreshing(false);
+  }, [fetchEvents]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -110,13 +100,15 @@ const PastEvents = () => {
         <Text style={styles.title}>Past Events</Text>
         <Text style={styles.subtitle}>Completed event history</Text>
       </View>
-      
+
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>

@@ -1,24 +1,11 @@
-import logger from '@/utils/logger';
 import RouteAssist from "@/components/RouteAssist";
-import getProvider from "@/hooks/getProvider";
 import logoutUser from "@/hooks/useLogoutUser";
-import { useEffect, useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+
 const Index = () => {
-
-  const [isEmail,setEmail] = useState(false);
-
-  const useProvider = async()=>{
-    const provider = await getProvider();
-    if(provider==="email") {
-      setEmail(true);
-      logger.log("GOT THE THING");
-     }
-  }
-
-  useEffect(()=>{
-    useProvider();
-  },[]);
+  const provider = useAuthStore((s) => s.provider);
+  const isEmail = provider === "email";
 
 
   return (
@@ -35,12 +22,12 @@ const Index = () => {
         />
         {
           isEmail &&
-        <RouteAssist
-          path={"/profilePages/profileSettings/changePassword"}
-          text={"Change Password"}
-        />
+          <RouteAssist
+            path={"/profilePages/profileSettings/changePassword"}
+            text={"Change Password"}
+          />
 
-}
+        }
         <RouteAssist
           path={"/profilePages/profileSettings/changeUsername"}
           text={"Change Username"}
@@ -55,8 +42,8 @@ const Index = () => {
         />
         <RouteAssist path={"/profilePages/profileSettings/about"} text={"About"} />
         <Pressable style={profileSettingsMenuStyle.options} onPress={logoutUser}>
-                    <Text style={profileSettingsMenuStyle.optionText}>Logout</Text>
-                </Pressable>
+          <Text style={profileSettingsMenuStyle.optionText}>Logout</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -91,8 +78,8 @@ const profileSettingsMenuStyle = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  optionText:{
-      fontSize:16
+  optionText: {
+    fontSize: 16
   }
 });
 

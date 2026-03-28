@@ -1,6 +1,6 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
-import getUser from "./getUser";
 
 const deleteEvent = async (eventId: string) => {
   try {
@@ -8,8 +8,8 @@ const deleteEvent = async (eventId: string) => {
       throw new Error("Event ID is required");
     }
 
-    const user = await getUser();
-    if (!user) {
+    const userId = useAuthStore.getState().userId;
+    if (!userId) {
       throw new Error("No authenticated user");
     }
 
@@ -17,11 +17,15 @@ const deleteEvent = async (eventId: string) => {
       .from("events")
       .delete()
       .eq("id", eventId)
-      .eq("vendor_id", user.id);
+      .eq("vendor_id", userId);
 
     if (error) {
       throw error;
     }
+
+    // Refresh the vendor store events after deletion
+    const { useVendorStore } = require('@/store/useVendorStore');
+    await useVendorStore.getState().fetchEvents();
 
     return true;
   } catch (error) {

@@ -5,12 +5,11 @@
  */
 
 // Core authentication functions
-export { default as registerUser } from './useRegisterUser';
-export { default as loginUser } from './useLoginUser';
-export { default as googleLogin } from './useGoogleAuth';
 export { default as setRole } from './setVendorAsRoleOnRegister';
-export { default as getUser } from './getUser';
 export { default as checkUserExists } from './useCheckUserExists';
+export { default as googleLogin } from './useGoogleAuth';
+export { default as loginUser } from './useLoginUser';
+export { default as registerUser } from './useRegisterUser';
 
 // Authentication state management
 export { default as useAuthenticationState } from './useAuthenticationState';
@@ -18,19 +17,12 @@ export type { AuthState } from './useAuthenticationState';
 
 // Helper utilities
 export {
-  isValidEmail,
-  validatePassword,
-  sanitizeEmail,
-  parseAuthError,
-  isAuthError,
-  maskEmail,
-  validateRegistrationForm,
-  validateLoginForm,
-  isDevelopment,
+  isAuthError, isDevelopment, isValidEmail, maskEmail, parseAuthError, sanitizeEmail, validateLoginForm, validatePassword, validateRegistrationForm
 } from './authHelpers';
 export type { ValidationResult } from './authHelpers';
 
 // Other user-related hooks
+export { default as useGetUserEmail } from './useGetUserEmail';
 export { default as useLogoutUser } from './useLogoutUser';
 export { default as usePasswordChange } from './usePasswordChange';
-export { default as useGetUserEmail } from './useGetUserEmail';
+

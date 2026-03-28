@@ -1,8 +1,8 @@
+import { useAuthStore } from "@/store/useAuthStore";
 import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import getUser from "./getUser";
 
 export type ImageUploadOptions = {
   bucket: "profile-images" | "event-images";
@@ -91,7 +91,7 @@ const useImageUpload = () => {
       logger.log("Starting upload to storage");
 
       // Check if user is authenticated
-      const user = await getUser();
+      const user = useAuthStore.getState().user;
 
       if (!user) {
         throw new Error("User is not authenticated. Please log in and try again.");
@@ -213,7 +213,7 @@ const useImageUpload = () => {
       }
 
       // Get user ID for folder structure
-      const user = await getUser();
+      const user = useAuthStore.getState().user;
       if (!user) {
         throw new Error("User not authenticated. Please log in and try again.");
       }

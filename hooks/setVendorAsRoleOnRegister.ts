@@ -1,6 +1,6 @@
+import { useAuthStore } from "@/store/useAuthStore";
 import logger from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
-import getUser from "./getUser";
 
 /**
  * Creates vendor profile and company entry for a user
@@ -12,7 +12,7 @@ import getUser from "./getUser";
  */
 const setRole = async (companyName?: string | null): Promise<boolean> => {
   try {
-    const user = await getUser();
+    const user = useAuthStore.getState().user;
 
     if (!user) {
       logger.error("No user found when attempting to create vendor profile");

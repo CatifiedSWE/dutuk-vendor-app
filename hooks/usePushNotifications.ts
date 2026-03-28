@@ -1,4 +1,4 @@
-import getUser from '@/hooks/getUser';
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import Constants from 'expo-constants';
@@ -94,15 +94,15 @@ export function usePushNotifications() {
             // Configure for Android
             if (Platform.OS === 'android') {
                 await Notifications.setNotificationChannelAsync('default', {
-                    name: 'Default',
+                    name: 'default',
                     importance: Notifications.AndroidImportance.MAX,
                     vibrationPattern: [0, 250, 250, 250],
-                    lightColor: '#7C2A2A',
+                    lightColor: '#FF231F7C',
                 });
             }
 
             // Store token in Supabase
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (user?.id) {
                 await storePushToken(user.id, token);
             }
@@ -155,7 +155,7 @@ export function usePushNotifications() {
         if (!expoPushToken) return;
 
         try {
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (user?.id) {
                 await supabase
                     .from('push_tokens')
@@ -197,10 +197,10 @@ export function usePushNotifications() {
 
         return () => {
             if (notificationListener.current) {
-                Notifications.removeNotificationSubscription(notificationListener.current);
+                notificationListener.current.remove();
             }
             if (responseListener.current) {
-                Notifications.removeNotificationSubscription(responseListener.current);
+                responseListener.current.remove();
             }
         };
     }, []);

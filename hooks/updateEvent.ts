@@ -1,6 +1,6 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
-import getUser from "./getUser";
 
 type EventStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
 
@@ -20,8 +20,8 @@ const updateEvent = async (eventId: string, payload: UpdateEventPayload) => {
       throw new Error("Event ID is required");
     }
 
-    const user = await getUser();
-    if (!user) {
+    const userId = useAuthStore.getState().userId;
+    if (!userId) {
       throw new Error("No authenticated user");
     }
 
@@ -32,13 +32,17 @@ const updateEvent = async (eventId: string, payload: UpdateEventPayload) => {
       .from("events")
       .update(updates)
       .eq("id", eventId)
-      .eq("vendor_id", user.id)
+      .eq("vendor_id", userId)
       .select()
       .single();
 
     if (error) {
       throw error;
     }
+
+    // Refresh the vendor store events after update
+    const { useVendorStore } = require('@/store/useVendorStore');
+    await useVendorStore.getState().fetchEvents();
 
     return data;
   } catch (error) {

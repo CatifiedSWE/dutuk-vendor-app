@@ -1,6 +1,7 @@
 import logger from '@/utils/logger';
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
+import { storage } from './storage';
 
 // Load Supabase credentials from environment variables
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -24,9 +25,7 @@ const createSafeStorage = () => ({
       if (Platform.OS === 'web') {
         return window.localStorage?.getItem(key) ?? null;
       }
-      // Dynamic import AsyncStorage only on native
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      return await AsyncStorage.getItem(key);
+      return storage.getString(key) ?? null;
     } catch (error) {
       logger.warn('Storage getItem error:', error);
       return null;
@@ -39,8 +38,7 @@ const createSafeStorage = () => ({
         window.localStorage?.setItem(key, value);
         return;
       }
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.setItem(key, value);
+      storage.set(key, value);
     } catch (error) {
       logger.warn('Storage setItem error:', error);
     }
@@ -52,8 +50,7 @@ const createSafeStorage = () => ({
         window.localStorage?.removeItem(key);
         return;
       }
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      await AsyncStorage.removeItem(key);
+      storage.delete(key);
     } catch (error) {
       logger.warn('Storage removeItem error:', error);
     }
@@ -67,7 +64,7 @@ const createCustomFetch = () => (url: RequestInfo | URL, options: RequestInit = 
   const isStorageRequest = urlString.includes('/storage/');
   const timeoutDuration = isStorageRequest ? 30000 : 10000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
-  
+
   return fetch(url, {
     ...options,
     signal: controller.signal,

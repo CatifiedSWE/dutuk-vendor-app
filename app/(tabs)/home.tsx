@@ -1,17 +1,10 @@
-import logger from '@/utils/logger';
 import placeholderImage from "@/assets/avatar.jpg";
 import UnifiedCalendar from '@/components/UnifiedCalendar';
-import getCount from "@/hooks/companyRequests/getRequestsCount";
-import getAllEvents from "@/hooks/getAllEvents";
-import getStoredDates, { StoredDate } from "@/hooks/getStoredDates";
-import getUser from "@/hooks/getUser";
-import { getPendingInquiriesCount } from "@/hooks/useEventInquiries";
-import getCompanyInfo from "@/hooks/useGetCompanyInfo";
-import { useVendorReviews } from "@/hooks/useVendorReviews";
+import { useVendorStore } from '@/store/useVendorStore'; // Added
 import { buildAvailabilityMarkedDates, MarkedDatesMap, mergeAvailabilityWithEvents } from '@/utils/calendarAvailability';
-import { supabase } from "@/utils/supabase";
+import logger from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,96 +18,47 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Event = {
-  id: string;
-  event: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  payment: number;
-  description?: string | null;
-  image_url?: string | null;
-  banner_url?: string | null;
-};
-
 const Home = () => {
-  const [requests, setRequests] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Store state
+  const allEvents = useVendorStore((s) => s.allEvents);
+  const company = useVendorStore((s) => s.company);
+  const requestsCount = useVendorStore((s) => s.requestsCount);
+  const pendingInquiries = useVendorStore((s) => s.pendingInquiries);
+  const calendarDates = useVendorStore((s) => s.calendarDates);
+  const reviewStats = useVendorStore((s) => s.reviewStats);
+  const reviews = useVendorStore((s) => s.reviews);
+  const fetchAll = useVendorStore((s) => s.fetchAll);
+  const isHydrated = useVendorStore((s) => s.isHydrated);
+
+  // Local UI state
   const [refreshing, setRefreshing] = useState(false);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [markedDates, setMarkedDates] = useState<MarkedDatesMap>({});
-  const [selectedDate, setSelectedDate] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState<string>("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png");
   const [profileImageLoading, setProfileImageLoading] = useState(false);
   const [imageLoadingStates, setImageLoadingStates] = useState<Record<string, boolean>>({});
-  const [calendarDates, setCalendarDates] = useState<StoredDate[]>([]);
-  const [pendingInquiries, setPendingInquiries] = useState<number>(0);
 
-  // Reviews data
-  const { reviews: recentReviews, stats: reviewStats, refetch: refetchReviews } = useVendorReviews(3);
+  const FALLBACK_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
+  const profileImageUrl = company?.logo_url || FALLBACK_IMAGE;
 
   const manageableEvents = useMemo(() => {
-    return events.filter((evt) => evt.status !== 'completed');
-  }, [events]);
+    return allEvents.filter((evt) => evt.status !== 'completed');
+  }, [allEvents]);
 
-  const displayCount = async () => {
-    try {
-      setLoading(true);
-      const user = await getUser();
-      if (user?.id) {
-        const count = await getCount(user.id.toString());
-        setRequests(typeof count === "number" ? count : 0);
+  // Derived calendar markers
+  const markedDates = useMemo(() => {
+    const availabilityMarked = buildAvailabilityMarkedDates(calendarDates);
+
+    const eventMarked: MarkedDatesMap = {};
+    allEvents.forEach((event) => {
+      const startDate = event.start_date?.split('T')[0];
+      if (startDate) {
+        eventMarked[startDate] = {
+          hasEvent: true,
+          eventColor: event.status === 'upcoming' ? '#007AFF' : event.status === 'ongoing' ? '#FF9500' : '#34C759',
+        };
       }
-    } catch (error) {
-      logger.error('Failed to load requests count:', error);
-      setRequests(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const loadEvents = async () => {
-    try {
-      const allEvents = await getAllEvents();
-      setEvents(allEvents);
-
-      // Load calendar dates from Supabase (same source as CalendarPage)
-      const storedCalendarDates = await getStoredDates();
-      setCalendarDates(storedCalendarDates || []);
-
-      // REUSE Calendar page logic - single source of truth for availability
-      const availabilityMarked = buildAvailabilityMarkedDates(storedCalendarDates || []);
-
-      // Create event markers separately
-      const eventMarked: MarkedDatesMap = {};
-      allEvents.forEach((event: Event) => {
-        const startDate = event.start_date?.split('T')[0];
-        if (startDate) {
-          eventMarked[startDate] = {
-            hasEvent: true,
-            eventColor: event.status === 'upcoming' ? '#007AFF' : event.status === 'ongoing' ? '#FF9500' : '#34C759',
-          };
-        }
-      });
-
-      // Merge availability with events using utility function
-      const merged = mergeAvailabilityWithEvents(availabilityMarked, eventMarked);
-      setMarkedDates(merged);
-    } catch (error) {
-      logger.error('Failed to load events:', error);
-    }
-  };
-
-  const loadProfileImage = async () => {
-    try {
-      const companyInfo = await getCompanyInfo();
-      if (companyInfo?.logo_url) {
-        setProfileImageUrl(companyInfo.logo_url);
-      }
-    } catch (error) {
-      logger.error('Failed to load profile image:', error);
-    }
-  };
+    return mergeAvailabilityWithEvents(availabilityMarked, eventMarked);
+  }, [allEvents, calendarDates]);
 
   const handleImageLoadStart = (eventId: string) => {
     setImageLoadingStates(prev => ({ ...prev, [eventId]: true }));
@@ -129,52 +73,16 @@ const Home = () => {
     setImageLoadingStates(prev => ({ ...prev, [eventId]: false }));
   };
 
-  const loadInquiriesCount = async () => {
-    try {
-      const user = await getUser();
-      if (!user?.id) return;
-
-      // Look up vendor profile ID from user_profiles
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile?.id) {
-        const count = await getPendingInquiriesCount(profile.id);
-        setPendingInquiries(count);
-      }
-    } catch (error) {
-      logger.error('Failed to load inquiries count:', error);
-    }
-  };
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      // Reload all data
-      await Promise.all([
-        displayCount(),
-        loadEvents(),
-        loadProfileImage(),
-        loadInquiriesCount()
-      ]);
+      await fetchAll();
     } catch (error) {
       logger.error('Failed to refresh data:', error);
     } finally {
       setRefreshing(false);
     }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      displayCount();
-      loadEvents();
-      loadProfileImage();
-      loadInquiriesCount();
-    }, [])
-  );
+  }, [fetchAll]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -213,7 +121,6 @@ const Home = () => {
                 onLoadEnd={() => setProfileImageLoading(false)}
                 onError={() => {
                   setProfileImageLoading(false);
-                  setProfileImageUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png");
                 }}
               />
               {profileImageLoading && (
@@ -377,7 +284,7 @@ const Home = () => {
               </View>
               <Text style={styles.eventCardTitle}>Upcoming</Text>
               <Text style={styles.eventCardCount}>
-                {events.filter(e => e.status === 'upcoming').length}
+                {allEvents.filter((e: any) => e.status === 'upcoming').length}
               </Text>
               <Text style={styles.eventCardDescription}>
                 Events scheduled ahead
@@ -394,7 +301,7 @@ const Home = () => {
               </View>
               <Text style={styles.eventCardTitle}>Ongoing</Text>
               <Text style={styles.eventCardCount}>
-                {events.filter(e => e.status === 'ongoing').length}
+                {allEvents.filter((e: any) => e.status === 'ongoing').length}
               </Text>
               <Text style={styles.eventCardDescription}>
                 Currently in progress
@@ -411,7 +318,7 @@ const Home = () => {
               </View>
               <Text style={styles.eventCardTitle}>Completed</Text>
               <Text style={styles.eventCardCount}>
-                {events.filter(e => e.status === 'completed').length}
+                {allEvents.filter((e: any) => e.status === 'completed').length}
               </Text>
               <Text style={styles.eventCardDescription}>
                 Successfully delivered
@@ -428,7 +335,7 @@ const Home = () => {
               </View>
               <Text style={styles.eventCardTitle}>All Events</Text>
               <Text style={styles.eventCardCount}>
-                {events.length}
+                {allEvents.length}
               </Text>
               <Text style={styles.eventCardDescription}>
                 Complete history
@@ -450,10 +357,10 @@ const Home = () => {
               </View>
               <View style={styles.requestsText}>
                 <Text style={styles.requestsTitle}>Pending Requests</Text>
-                {loading ? (
+                {!isHydrated ? (
                   <ActivityIndicator size="small" color="#800000" />
                 ) : (
-                  <Text style={styles.requestsCount}>{requests ?? 0} new</Text>
+                  <Text style={styles.requestsCount}>{requestsCount ?? 0} new</Text>
                 )}
               </View>
             </View>
@@ -493,13 +400,13 @@ const Home = () => {
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>
-                {events.filter(e => e.status === 'upcoming' || e.status === 'ongoing').length}
+                {allEvents.filter((e: any) => e.status === 'upcoming' || e.status === 'ongoing').length}
               </Text>
               <Text style={styles.statLabel}>Active</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>
-                {events.filter(e => {
+                {allEvents.filter((e: any) => {
                   const eventDate = new Date(e.start_date);
                   const currentDate = new Date();
                   return eventDate.getMonth() === currentDate.getMonth() &&
@@ -524,7 +431,7 @@ const Home = () => {
             </Pressable>
           </View>
 
-          {recentReviews.length === 0 ? (
+          {reviews.length === 0 ? (
             <View style={styles.emptyReviewsCard}>
               <Ionicons name="star-outline" size={44} color="#FFC13C" />
               <Text style={styles.emptyReviewsTitle}>No reviews yet</Text>
@@ -558,7 +465,7 @@ const Home = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.reviewsScrollContent}
               >
-                {recentReviews.map((review) => (
+                {reviews.map((review: any) => (
                   <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewCardHeader}>
                       <View style={styles.reviewerInfo}>
@@ -598,7 +505,6 @@ const Home = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

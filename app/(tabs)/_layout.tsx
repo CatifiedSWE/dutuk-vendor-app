@@ -1,4 +1,4 @@
-import { useOrderNotifications } from '@/hooks/OrderNotificationContext';
+import { useVendorStore } from '@/store/useVendorStore';
 import { Tabs } from "expo-router";
 import { Text, View } from 'react-native';
 import { FileText, Home, MessageCircle, User } from 'react-native-feather';
@@ -38,7 +38,8 @@ function OrdersTabIcon({ color, focused, badgeCount }: { color: string; focused:
 }
 
 export default function TabLayout() {
-  const { newOrderCount, markOrdersAsSeen } = useOrderNotifications();
+  const newOrderCount = useVendorStore((s) => s.newOrderCount);
+  const resetNewOrderCount = useVendorStore((s) => s.resetNewOrderCount);
 
   return (
     <Tabs
@@ -106,7 +107,7 @@ export default function TabLayout() {
         listeners={{
           tabPress: () => {
             // Clear notification count when orders tab is pressed
-            markOrdersAsSeen();
+            resetNewOrderCount();
           },
         }}
       />

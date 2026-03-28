@@ -1,34 +1,15 @@
 import DisplayEvents from "@/components/DisplayEvents";
-import getPastEvents from "@/hooks/getPastEvents";
-import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { useCompletedEvents } from "@/store/useVendorStore";
+import { View } from "react-native";
 
-const PastEvents = ()=>{
-    const [data,setData] = useState<any|null>(null);
+const PastEvents = () => {
+    const data = useCompletedEvents();
 
-    const getEarnings = async()=>{
-        let temp=await getPastEvents();
-        if(typeof temp ==='object')
-            setData(temp);
-    }
-    useEffect(()=>{
-        getEarnings();
-    },[]);
-
-    if(data!==null){
-
-    return(
+    return (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <DisplayEvents events={data} />
         </View>
-    )
-    }
-    else{
-        return(
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text>Loading</Text>
-        </View>
-        )
-    }
+    );
 }
+
 export default PastEvents;

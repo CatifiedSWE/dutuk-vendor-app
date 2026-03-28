@@ -1,5 +1,5 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
-import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -222,7 +222,7 @@ export function useSendMessage() {
                 setLoading(true);
                 setError(null);
 
-                const user = await getUser();
+                const user = useAuthStore.getState().user;
                 if (!user?.id) {
                     throw new Error('User not authenticated');
                 }
@@ -279,7 +279,7 @@ export function useMarkAsRead() {
         try {
             setLoading(true);
 
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (!user?.id) return;
 
             // Mark all unread messages sent to this user as read

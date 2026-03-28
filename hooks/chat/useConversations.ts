@@ -1,5 +1,5 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
-import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -95,7 +95,7 @@ export function useVendorConversations() {
     useEffect(() => {
         const initializeConversations = async () => {
             try {
-                const user = await getUser();
+                const user = useAuthStore.getState().user;
                 if (user?.id) {
                     setUserId(user.id);
                     await fetchConversations(user.id);

@@ -1,8 +1,8 @@
-import logger from '@/utils/logger';
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 import useCompanyInfo from "@/hooks/useCompanyInfo";
-import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import useImageUpload from "@/hooks/useImageUpload";
+import { useVendorStore } from "@/store/useVendorStore";
+import logger from '@/utils/logger';
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -19,12 +19,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 const EditProfileScreen = () => {
-  const [loading, setLoading] = useState(true);
+  const companyStoreData = useVendorStore((s) => s.company);
+  const loading = useVendorStore((s) => s.companyLoading);
+
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectingImage, setSelectingImage] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+
   const [companyData, setCompanyData] = useState({
     name: "",
     description: "",
@@ -32,46 +35,26 @@ const EditProfileScreen = () => {
     phone: "",
     website: "",
     mail: "",
-    logoUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png",
   });
 
   const { pickImage, uploadImage } = useImageUpload();
 
-  // Fetch company data on mount
+  // Sync with store on mount or store change
   useEffect(() => {
-    loadCompanyInfo();
-  }, []);
-
-  const loadCompanyInfo = async () => {
-    try {
-      setLoading(true);
-      const data = await getCompanyInfo();
-
-      if (data) {
-        setCompanyData({
-          name: data.company || "",
-          description: data.description || "",
-          address: data.address || "",
-          phone: data.phone || "",
-          website: data.website || "",
-          mail: data.mail || "",
-          logoUrl:
-            data.logo_url ||
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png",
-        });
-      }
-    } catch (error) {
-      logger.error("Failed to load company info:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to load company information.",
+    if (companyStoreData) {
+      setCompanyData({
+        name: companyStoreData.company || "",
+        description: companyStoreData.description || "",
+        address: companyStoreData.address || "",
+        phone: companyStoreData.phone || "",
+        website: companyStoreData.website || "",
+        mail: companyStoreData.mail || "",
+        logoUrl: companyStoreData.logo_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [companyStoreData]);
+
 
   const handleProfileImageSelect = async () => {
     try {

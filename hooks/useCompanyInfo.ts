@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/store/useAuthStore';
+import { useVendorStore } from '@/store/useVendorStore';
 import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
@@ -21,18 +23,12 @@ const useCompanyInfo = async ({
   description,
 }: CompanyInfoType) => {
   try {
-    // Get the current user from the session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const userId = useAuthStore.getState().userId;
 
-    if (authError || !user) {
-      logger.error("Authentication error:", authError);
+    if (!userId) {
+      logger.error("No authenticated user ID found in store.");
       return;
     }
-
-    const userId = user.id;
 
     // Check if company info already exists for this user
     const { data: existing, error: fetchError } = await supabase
@@ -49,17 +45,10 @@ const useCompanyInfo = async ({
     if (existing) {
       // Update existing company info
       const updateData: any = { company, mail, phone, address, website };
-      
-      // Only include logo_url if provided
-      if (logo_url !== undefined) {
-        updateData.logo_url = logo_url;
-      }
-      
-      // Only include description if provided
-      if (description !== undefined) {
-        updateData.description = description;
-      }
-      
+
+      if (logo_url !== undefined) updateData.logo_url = logo_url;
+      if (description !== undefined) updateData.description = description;
+
       const { error: updateError } = await supabase
         .from("companies")
         .update(updateData)
@@ -69,6 +58,8 @@ const useCompanyInfo = async ({
         logger.error("Error updating company info:", updateError);
       } else {
         logger.log("Company info updated.");
+        // Refresh store
+        await useVendorStore.getState().fetchCompany();
       }
     } else {
       // Insert new company info
@@ -80,23 +71,18 @@ const useCompanyInfo = async ({
         address,
         website,
       };
-      
-      // Only include logo_url if provided
-      if (logo_url !== undefined) {
-        insertData.logo_url = logo_url;
-      }
-      
-      // Only include description if provided
-      if (description !== undefined) {
-        insertData.description = description;
-      }
-      
+
+      if (logo_url !== undefined) insertData.logo_url = logo_url;
+      if (description !== undefined) insertData.description = description;
+
       const { error: insertError } = await supabase.from("companies").insert([insertData]);
 
       if (insertError) {
         logger.error("Error inserting company info:", insertError);
       } else {
         logger.log("Company info inserted.");
+        // Refresh store
+        await useVendorStore.getState().fetchCompany();
       }
     }
   } catch (error) {

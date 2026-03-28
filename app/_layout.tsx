@@ -1,4 +1,4 @@
-import { OrderNotificationProvider } from '@/hooks/OrderNotificationContext';
+import '@/global';
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as WebBrowser from "expo-web-browser";
@@ -6,56 +6,75 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Toast from 'react-native-toast-message';
-import '../global';
+
+// Performance Stores
+import { useAuthStore } from '@/store/useAuthStore';
+import { setupRealtimeSubscriptions, teardownRealtimeSubscriptions } from '@/store/useRealtimeStore';
+import { useVendorStore } from '@/store/useVendorStore';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
+  const initialize = useAuthStore((s) => s.initialize);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const fetchAll = useVendorStore((s) => s.fetchAll);
+
   useEffect(() => {
     // Hide splash screen immediately to prevent hanging
     SplashScreen.hideAsync().catch(() => {
       // Ignore errors if splash screen is already hidden
     });
+
+    // Initialize auth state from MMKV/Supabase session
+    initialize();
   }, []);
+
+  // When user authenticates, fetch all vendor data in one batch + setup unified realtime channel
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAll();
+      setupRealtimeSubscriptions();
+    } else {
+      teardownRealtimeSubscriptions();
+    }
+  }, [isAuthenticated]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
-        <OrderNotificationProvider>
-          <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-            {/* Landing/Auth Check Screen */}
-            <Stack.Screen name="index" options={{ animation: 'none' }} />
+        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+          {/* Landing/Auth Check Screen */}
+          <Stack.Screen name="index" options={{ animation: 'none' }} />
 
-            {/* Main App Tabs */}
-            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          {/* Main App Tabs */}
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
 
-            {/* Auth Screens */}
-            <Stack.Screen name="auth/UserLogin" options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen name="auth/register" />
-            <Stack.Screen name="auth/EmailAuth" />
-            <Stack.Screen name="auth/callback" />
-            <Stack.Screen name="auth/OnboardingGetStarted" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="auth/OnboardingCategories" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="auth/OnboardingLocation" options={{ animation: 'slide_from_right' }} />
+          {/* Auth Screens */}
+          <Stack.Screen name="auth/UserLogin" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="auth/register" />
+          <Stack.Screen name="auth/EmailAuth" />
+          <Stack.Screen name="auth/callback" />
+          <Stack.Screen name="auth/OnboardingGetStarted" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="auth/OnboardingCategories" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="auth/OnboardingLocation" options={{ animation: 'slide_from_right' }} />
 
-            {/* Modal/Overlay Screens */}
-            <Stack.Screen
-              name="orders"
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom'
-              }}
-            />
+          {/* Modal/Overlay Screens */}
+          <Stack.Screen
+            name="orders"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom'
+            }}
+          />
 
-            {/* Other App Screens */}
-            <Stack.Screen name="event" />
-            <Stack.Screen name="requests" />
-            <Stack.Screen name="chat" />
-            <Stack.Screen name="profilePages" />
-            <Stack.Screen name="public" />
-          </Stack>
-          <Toast />
-        </OrderNotificationProvider>
+          {/* Other App Screens */}
+          <Stack.Screen name="event" />
+          <Stack.Screen name="requests" />
+          <Stack.Screen name="chat" />
+          <Stack.Screen name="profilePages" />
+          <Stack.Screen name="public" />
+        </Stack>
+        <Toast />
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

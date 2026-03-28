@@ -1,11 +1,13 @@
 import AuthButton from "@/components/AuthButton";
 import EditableInputField from "@/components/EditableInputField";
 import useCompanyInfo from "@/hooks/useCompanyInfo";
-import getCompanyInfo from "@/hooks/useGetCompanyInfo";
+import { useVendorStore } from "@/store/useVendorStore";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
 const CompanyInfoPage = () => {
+  const companyData = useVendorStore((s) => s.company);
+
   const [companyEditable, setCompanyEditable] = useState(false);
   const [mailEditable, setMailEditable] = useState(false);
   const [phoneEditable, setPhoneEditable] = useState(false);
@@ -18,24 +20,20 @@ const CompanyInfoPage = () => {
   const [address, setAddress] = useState("");
   const [website, setWebsite] = useState("");
 
-  const handlePress = () => {
-    useCompanyInfo({ company, mail, phone, address, website });
-    Alert.alert("Company Information Updated","Successfully updated");
-  };
-  useEffect(()=>{
-    fetchInfo();
-  },[])
-
-  const fetchInfo = async()=>{
-    let fetched = await getCompanyInfo();
-    if(fetched && fetched.company){
-      setCompany(fetched.company);
-      setMail(fetched.mail);
-      setPhone(fetched.phone);
-      setAddress(fetched.address);
-      setWebsite(fetched.website);
+  useEffect(() => {
+    if (companyData) {
+      setCompany(companyData.company || "");
+      setMail(companyData.mail || "");
+      setPhone(companyData.phone || "");
+      setAddress(companyData.address || "");
+      setWebsite(companyData.website || "");
     }
-  }
+  }, [companyData]);
+
+  const handlePress = async () => {
+    await useCompanyInfo({ company, mail, phone, address, website });
+    Alert.alert("Company Information Updated", "Successfully updated");
+  };
 
   return (
     <View style={styles.screen}>

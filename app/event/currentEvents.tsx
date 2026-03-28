@@ -1,37 +1,21 @@
-import getCurrentEvents from "@/hooks/getCurrentEvents";
+import { useOngoingEvents, useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Event = {
-  id: string;
-  event: string;
-  start_date: string;
-  end_date: string;
-  payment: number;
-  status: string;
-  customer_name?: string;
-  company_name: string;
-};
-
 const CurrentEvents = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const events = useOngoingEvents();
+  const loading = useVendorStore((s) => s.eventsLoading);
+  const fetchEvents = useVendorStore((s) => s.fetchEvents);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
-    const data = await getCurrentEvents();
-    setEvents(data);
-    setLoading(false);
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents();
+    setRefreshing(false);
+  }, [fetchEvents]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -60,12 +44,14 @@ const CurrentEvents = () => {
         <Text style={styles.title}>Ongoing Events</Text>
         <Text style={styles.subtitle}>Events currently in progress</Text>
       </View>
-      
+
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>
@@ -75,7 +61,7 @@ const CurrentEvents = () => {
             <Text style={styles.emptyText}>Events in progress will appear here</Text>
           </View>
         }
-        renderItem={({item}) => (
+        renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{item.event}</Text>
@@ -84,21 +70,21 @@ const CurrentEvents = () => {
                 <Text style={styles.statusText}>Ongoing</Text>
               </View>
             </View>
-            
+
             {item.customer_name && (
               <View style={styles.infoRow}>
                 <Ionicons name="person-outline" size={18} color="#57534e" />
                 <Text style={styles.infoText}>{item.customer_name}</Text>
               </View>
             )}
-            
+
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={18} color="#57534e" />
               <Text style={styles.infoText}>
                 {formatDate(item.start_date)} → {formatDate(item.end_date)}
               </Text>
             </View>
-            
+
             <View style={styles.cardFooter}>
               <View style={styles.paymentContainer}>
                 <Ionicons name="cash-outline" size={18} color="#800000" />

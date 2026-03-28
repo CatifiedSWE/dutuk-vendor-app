@@ -1,38 +1,21 @@
-import getUpcomingEvents from "@/hooks/getUpcomingEvents";
+import { useUpcomingEvents, useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Event = {
-  id: string;
-  event: string;
-  start_date: string;
-  end_date: string;
-  payment: number;
-  status: string;
-  description?: string;
-  customer_name?: string;
-  company_name: string;
-};
-
 const UpcomingEvents = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const events = useUpcomingEvents();
+  const loading = useVendorStore((s) => s.eventsLoading);
+  const fetchEvents = useVendorStore((s) => s.fetchEvents);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
-    const data = await getUpcomingEvents();
-    setEvents(data);
-    setLoading(false);
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents();
+    setRefreshing(false);
+  }, [fetchEvents]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -61,12 +44,14 @@ const UpcomingEvents = () => {
         <Text style={styles.title}>Upcoming Events</Text>
         <Text style={styles.subtitle}>Events scheduled ahead</Text>
       </View>
-      
+
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>

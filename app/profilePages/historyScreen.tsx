@@ -1,7 +1,6 @@
-import getPastEvents from "@/hooks/getPastEvents";
+import { useCompletedEvents, useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
-import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -18,26 +17,17 @@ type PastEvent = {
 const HistoryScreen = () => {
   const navigation = useNavigation();
 
-  const [events, setEvents] = useState<PastEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const events = useCompletedEvents();
+  const loading = useVendorStore((s) => s.eventsLoading);
+  const fetchEvents = useVendorStore((s) => s.fetchEvents);
 
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getPastEvents();
-      setEvents(Array.isArray(data) ? data : []);
-    } catch (error) {
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchEvents();
+    setRefreshing(false);
+  }, [fetchEvents]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -98,14 +88,16 @@ const HistoryScreen = () => {
 
   return (
     <View style={styles.container}>
-       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-         <Ionicons name="chevron-back" size={24} color="black" />
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={24} color="black" />
       </TouchableOpacity>
       <FlatList
         data={events}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No past events</Text>

@@ -6,7 +6,7 @@
  * DO NOT duplicate this logic - import and use this utility.
  */
 
-import { StoredDate } from "@/hooks/getStoredDates";
+import { StoredDate } from "@/store/useVendorStore";
 
 export interface MarkedDate {
   unavailable?: boolean;
@@ -29,7 +29,7 @@ export interface MarkedDatesMap {
  */
 export function buildAvailabilityMarkedDates(calendarDates: StoredDate[]): MarkedDatesMap {
   const markedDates: MarkedDatesMap = {};
-  
+
   calendarDates.forEach((calDate) => {
     if (calDate.status === 'unavailable') {
       markedDates[calDate.date] = {
@@ -41,7 +41,7 @@ export function buildAvailabilityMarkedDates(calendarDates: StoredDate[]): Marke
       };
     }
   });
-  
+
   return markedDates;
 }
 
@@ -58,7 +58,7 @@ export function mergeAvailabilityWithEvents(
   eventMarkedDates: MarkedDatesMap
 ): MarkedDatesMap {
   const merged: MarkedDatesMap = { ...availabilityMarkedDates };
-  
+
   // Overlay event markers on top of availability
   Object.keys(eventMarkedDates).forEach((dateKey) => {
     merged[dateKey] = {
@@ -66,7 +66,7 @@ export function mergeAvailabilityWithEvents(
       ...eventMarkedDates[dateKey], // Add event markers
     };
   });
-  
+
   return merged;
 }
 

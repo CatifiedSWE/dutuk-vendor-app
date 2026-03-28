@@ -1,7 +1,7 @@
+import { useAuthStore } from '@/store/useAuthStore';
+import { useVendorStore } from '@/store/useVendorStore';
 import logger from '@/utils/logger';
-import getCompanyInfo from "@/hooks/useGetCompanyInfo";
 import { supabase } from "@/utils/supabase";
-import getUser from "./getUser";
 
 type EventStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
 
@@ -20,13 +20,12 @@ export type CreateEventPayload = {
 
 const createEvent = async (payload: CreateEventPayload) => {
   try {
-    const user = await getUser();
-    if (!user) {
+    const userId = useAuthStore.getState().userId;
+    if (!userId) {
       throw new Error("No authenticated user");
     }
 
-    const companyInfo = await getCompanyInfo();
-    const companyName = companyInfo?.company || "My Company";
+    const companyName = useVendorStore.getState().company?.company || "My Company";
 
     const dateArray = payload.endDate && payload.endDate.length > 0
       ? [payload.startDate, payload.endDate]
@@ -43,9 +42,9 @@ const createEvent = async (payload: CreateEventPayload) => {
     const { data, error } = await supabase
       .from("events")
       .insert({
-        vendor_id: user.id,
+        vendor_id: userId,
         company_name: companyName,
-        customer_id: payload.customerId || user.id,
+        customer_id: payload.customerId || userId,
         customer_name: payload.customerName || null,
         event: payload.event.trim(),
         description: payload.description?.trim() || null,

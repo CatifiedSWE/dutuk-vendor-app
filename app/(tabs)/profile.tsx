@@ -1,9 +1,9 @@
+import { useAuthStore } from '@/store/useAuthStore';
+import { useVendorStore } from '@/store/useVendorStore';
 import logger from '@/utils/logger';
-import getCompanyInfo from "@/hooks/useGetCompanyInfo";
-import { supabase } from "@/utils/supabase";
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
+import React from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,12 +18,9 @@ import Toast from 'react-native-toast-message';
 
 const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(true);
-  const [companyData, setCompanyData] = useState({
-    name: "",
-    description: "",
-    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png"
-  });
+  const company = useVendorStore((s) => s.company);
+  const loading = useVendorStore((s) => s.companyLoading);
+  const logoutStore = useAuthStore((s) => s.logout);
 
   const menuItems = [
     {
@@ -58,59 +55,18 @@ const ProfileScreen = () => {
     },
   ];
 
-  useEffect(() => {
-    loadCompanyInfo();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadCompanyInfo();
-    }, [])
-  );
-
-  const loadCompanyInfo = async () => {
-    try {
-      setLoading(true);
-      const data = await getCompanyInfo();
-
-      if (data) {
-        setCompanyData({
-          name: data.company?.trim() || "",
-          description: data.description?.trim() || "",
-          logoUrl: data.logo_url || "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png"
-        });
-      }
-    } catch (error) {
-      logger.error("Failed to load company info:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to load company information.'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to logout'
-        });
-      } else {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Logged out successfully'
-        });
-        // Redirect to welcome screen (consistent entry point)
-        router.replace('/');
-      }
+      await logoutStore();
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Logged out successfully'
+      });
+      // Redirect to welcome screen
+      router.replace('/');
     } catch (error) {
+      logger.error('Logout failed:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
@@ -119,7 +75,10 @@ const ProfileScreen = () => {
     }
   };
 
-  if (loading) {
+  const FALLBACK_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
+  const profileImageUrl = company?.logo_url || FALLBACK_IMAGE;
+
+  if (loading && !company) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -153,7 +112,7 @@ const ProfileScreen = () => {
           >
             <View style={styles.avatarWrapper}>
               <Image
-                source={{ uri: companyData.logoUrl }}
+                source={{ uri: profileImageUrl }}
                 style={styles.avatar}
               />
               <View style={styles.editBadge}>
@@ -169,14 +128,14 @@ const ProfileScreen = () => {
               numberOfLines={2}
               ellipsizeMode="tail"
             >
-              {companyData.name || "No name"}
+              {company?.company || "No name"}
             </Text>
             <Text
               style={styles.companyTagline}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
-              {companyData.description || "No description"}
+              {company?.description || "No description"}
             </Text>
           </View>
         </View>

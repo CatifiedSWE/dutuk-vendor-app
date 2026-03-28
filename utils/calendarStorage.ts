@@ -1,5 +1,5 @@
 import logger from '@/utils/logger';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage } from '@/utils/storage';
 
 export type CalendarDateStatus = 'available' | 'unavailable';
 
@@ -13,27 +13,27 @@ export interface CalendarDate {
 const CALENDAR_STORAGE_KEY = '@dutuk_calendar_dates';
 
 /**
- * Get all stored calendar dates from AsyncStorage
+ * Get all stored calendar dates from MMKV
  */
 export const getCalendarDates = async (): Promise<CalendarDate[]> => {
   try {
-    const jsonValue = await AsyncStorage.getItem(CALENDAR_STORAGE_KEY);
+    const jsonValue = storage.getString(CALENDAR_STORAGE_KEY);
     return jsonValue != null ? JSON.parse(jsonValue) : [];
   } catch (error) {
-    logger.error('Error reading calendar dates from AsyncStorage:', error);
+    logger.error('Error reading calendar dates from MMKV:', error);
     return [];
   }
 };
 
 /**
- * Save calendar dates to AsyncStorage
+ * Save calendar dates to MMKV
  */
 export const saveCalendarDates = async (dates: CalendarDate[]): Promise<void> => {
   try {
     const jsonValue = JSON.stringify(dates);
-    await AsyncStorage.setItem(CALENDAR_STORAGE_KEY, jsonValue);
+    storage.set(CALENDAR_STORAGE_KEY, jsonValue);
   } catch (error) {
-    logger.error('Error saving calendar dates to AsyncStorage:', error);
+    logger.error('Error saving calendar dates to MMKV:', error);
   }
 };
 
@@ -96,10 +96,10 @@ export const getCalendarDate = async (date: string): Promise<CalendarDate | null
 export const toggleDateStatus = async (date: string): Promise<CalendarDateStatus> => {
   try {
     const existingDate = await getCalendarDate(date);
-    
+
     if (existingDate) {
       // Toggle status
-      const newStatus: CalendarDateStatus = 
+      const newStatus: CalendarDateStatus =
         existingDate.status === 'available' ? 'unavailable' : 'available';
       await setCalendarDate(date, newStatus, existingDate.event, existingDate.description);
       return newStatus;
@@ -129,8 +129,8 @@ export const isPastDate = (dateString: string): boolean => {
  */
 export const clearAllCalendarDates = async (): Promise<void> => {
   try {
-    await AsyncStorage.removeItem(CALENDAR_STORAGE_KEY);
+    storage.delete(CALENDAR_STORAGE_KEY);
   } catch (error) {
-    logger.error('Error clearing calendar dates:', error);
+    logger.error('Error clearing calendar dates from MMKV:', error);
   }
 };

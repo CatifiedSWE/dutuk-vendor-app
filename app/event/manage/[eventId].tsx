@@ -1,8 +1,9 @@
-import logger from '@/utils/logger';
+import KeyboardSafeView from "@/components/KeyboardSafeView";
 import deleteEvent from "@/hooks/deleteEvent";
-import getEventById from "@/hooks/getEventById";
 import updateEvent, { UpdateEventPayload } from "@/hooks/updateEvent";
 import useImageUpload from "@/hooks/useImageUpload";
+import { useVendorStore } from "@/store/useVendorStore";
+import logger from '@/utils/logger';
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -17,7 +18,6 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import KeyboardSafeView from "@/components/KeyboardSafeView";
 
 const STATUSES = ["upcoming", "ongoing", "completed", "cancelled"] as const;
 
@@ -37,7 +37,9 @@ const ManageEventScreen = () => {
     return Array.isArray(raw) ? raw[0] : raw;
   }, [params.eventId]);
 
-  const [loading, setLoading] = useState(true);
+  const allEvents = useVendorStore((s) => s.allEvents);
+  const eventsLoading = useVendorStore((s) => s.eventsLoading);
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectingImage, setSelectingImage] = useState(false);
@@ -60,28 +62,25 @@ const ManageEventScreen = () => {
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     if (!initialFormState) return false;
-    
-    const formChanged = 
+
+    const formChanged =
       formState.event !== initialFormState.event ||
       formState.description !== initialFormState.description ||
       formState.payment !== initialFormState.payment ||
       formState.status !== initialFormState.status ||
       formState.startDate !== initialFormState.startDate ||
       formState.endDate !== initialFormState.endDate;
-    
+
     const imageChanged = eventImageUrl !== initialImageUrl;
-    
+
     return formChanged || imageChanged;
   }, [formState, eventImageUrl, initialFormState, initialImageUrl]);
 
+  // Load event from store
   useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        if (!eventId) {
-          throw new Error("Missing event id");
-        }
-        setLoading(true);
-        const data = await getEventById(eventId);
+    if (eventId && allEvents.length > 0) {
+      const data = allEvents.find((e) => e.id === eventId);
+      if (data) {
         const loadedFormState = {
           event: data.event || "",
           description: data.description || "",
@@ -92,30 +91,26 @@ const ManageEventScreen = () => {
         };
         setFormState(loadedFormState);
         setInitialFormState(loadedFormState);
-        
-        // Load existing image if available
+
         if (data.image_url) {
           setEventImageUrl(data.image_url);
           setInitialImageUrl(data.image_url);
         }
-      } catch (error) {
+      } else if (!eventsLoading) {
         Toast.show({
           type: "error",
-          text1: "Unable to load event",
-          text2: "Please try again later.",
+          text1: "Event not found",
+          text2: "The event you are looking for does not exist.",
         });
-      } finally {
-        setLoading(false);
+        router.back();
       }
-    };
-
-    fetchEvent();
-  }, [eventId]);
+    }
+  }, [eventId, allEvents, eventsLoading]);
 
   const handleEventImageSelect = async () => {
     try {
       setSelectingImage(true);
-      
+
       const imageUri = await pickImage({
         bucket: "event-images",
         folder: "events",
@@ -156,16 +151,16 @@ const ManageEventScreen = () => {
 
     try {
       setUploadingImage(true);
-      
+
       Toast.show({
         type: 'info',
         text1: 'Uploading...',
         text2: 'Uploading image to server...'
       });
-      
+
       // Store old image URL before uploading new one
       const oldImageUrl = eventImageUrl;
-      
+
       const imageUrl = await uploadImage(selectedImageUri, {
         bucket: "event-images",
         folder: "events",
@@ -185,12 +180,12 @@ const ManageEventScreen = () => {
 
         setEventImageUrl(imageUrl);
         setSelectedImageUri(null);
-        
+
         // Also update in database immediately
         if (eventId) {
           await updateEvent(eventId, { image_url: imageUrl });
         }
-        
+
         Toast.show({
           type: 'success',
           text1: 'Success',
@@ -228,10 +223,10 @@ const ManageEventScreen = () => {
               // Delete from storage
               logger.log("Removing image from storage:", eventImageUrl);
               await deleteImage(eventImageUrl);
-              
+
               // Update database to remove image URL
               await updateEvent(eventId, { image_url: null });
-              
+
               setEventImageUrl(null);
               Toast.show({
                 type: 'success',
@@ -295,7 +290,7 @@ const ManageEventScreen = () => {
         text1: "Event updated",
         text2: "Your event details have been saved.",
       });
-      
+
       // Navigate back to home after successful save
       router.push("/(tabs)/home");
     } catch (error) {
@@ -341,7 +336,7 @@ const ManageEventScreen = () => {
 
               // Delete the event from database
               await deleteEvent(eventId);
-              
+
               Toast.show({
                 type: "success",
                 text1: "Event deleted",
@@ -390,7 +385,7 @@ const ManageEventScreen = () => {
     }
   };
 
-  if (loading) {
+  if (eventsLoading && !initialFormState) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -400,9 +395,9 @@ const ManageEventScreen = () => {
   }
 
   return (
-    <KeyboardSafeView 
+    <KeyboardSafeView
       scrollable={true}
-      style={styles.container} 
+      style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.section}>
@@ -412,12 +407,12 @@ const ManageEventScreen = () => {
         <Text style={styles.label}>Event Image</Text>
         {eventImageUrl ? (
           <View style={styles.imagePreviewContainer}>
-            <Image 
-              source={{ uri: eventImageUrl }} 
-              style={styles.imagePreview} 
+            <Image
+              source={{ uri: eventImageUrl }}
+              style={styles.imagePreview}
             />
             <View style={styles.imageActionsRow}>
-              <Pressable 
+              <Pressable
                 style={styles.removeImageButton}
                 onPress={handleRemoveImage}
                 disabled={selectingImage || uploadingImage || saving || deleting}
@@ -429,12 +424,12 @@ const ManageEventScreen = () => {
           </View>
         ) : selectedImageUri ? (
           <View style={styles.imagePreviewContainer}>
-            <Image 
-              source={{ uri: selectedImageUri }} 
-              style={styles.imagePreview} 
+            <Image
+              source={{ uri: selectedImageUri }}
+              style={styles.imagePreview}
             />
             <View style={styles.imageActionsRow}>
-              <Pressable 
+              <Pressable
                 style={[styles.uploadImageButton, uploadingImage && { opacity: 0.6 }]}
                 onPress={handleEventImageUpload}
                 disabled={uploadingImage || saving || deleting}
@@ -448,7 +443,7 @@ const ManageEventScreen = () => {
                   </>
                 )}
               </Pressable>
-              <Pressable 
+              <Pressable
                 style={styles.changeSelectionButton}
                 onPress={handleEventImageSelect}
                 disabled={uploadingImage || saving || deleting}
@@ -458,7 +453,7 @@ const ManageEventScreen = () => {
             </View>
           </View>
         ) : (
-          <Pressable 
+          <Pressable
             style={styles.uploadButton}
             onPress={handleEventImageSelect}
             disabled={selectingImage || saving || deleting}
@@ -551,9 +546,9 @@ const ManageEventScreen = () => {
         )}
       </Pressable>
 
-      <Pressable 
-        style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]} 
-        onPress={handleDelete} 
+      <Pressable
+        style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+        onPress={handleDelete}
         disabled={saving || deleting}
       >
         {deleting ? (

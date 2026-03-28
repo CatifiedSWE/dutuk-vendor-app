@@ -1,5 +1,5 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
-import getUser from '@/hooks/getUser';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -28,7 +28,7 @@ interface TypingState {
  */
 export function useTypingIndicator(conversationId: string | null, isVendor: boolean = true) {
     const [otherPartyTyping, setOtherPartyTyping] = useState(false);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingTimeoutRef = useRef<any>(null);
     const lastTypingUpdateRef = useRef<number>(0);
 
     // Minimum interval between typing updates (in ms)
@@ -51,7 +51,7 @@ export function useTypingIndicator(conversationId: string | null, isVendor: bool
         lastTypingUpdateRef.current = now;
 
         try {
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (!user?.id) return;
 
             // Update the appropriate typing column based on role
@@ -73,7 +73,7 @@ export function useTypingIndicator(conversationId: string | null, isVendor: bool
         if (!conversationId) return;
 
         try {
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (!user?.id) return;
 
             // Clear the appropriate typing column based on role

@@ -1,4 +1,4 @@
-import getUser from '@/hooks/getUser';
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import * as DocumentPicker from 'expo-document-picker';
@@ -181,7 +181,7 @@ export function useAttachments() {
             setUploading(true);
             setError(null);
 
-            const user = await getUser();
+            const user = useAuthStore.getState().user;
             if (!user?.id) {
                 throw new Error('User not authenticated');
             }

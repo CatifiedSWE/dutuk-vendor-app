@@ -1,8 +1,7 @@
+import { useVendorStore } from '@/store/useVendorStore';
 import logger from '@/utils/logger';
-import getCompanyInfo from '@/hooks/useGetCompanyInfo';
-import { useOrders } from '@/hooks/useOrders';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,52 +11,37 @@ import {
   Text,
   View
 } from 'react-native';
-import { Bell, Calendar, Edit, FileText } from 'react-native-feather';
+import { Bell, Calendar, FileText } from 'react-native-feather';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 const OrdersScreen = () => {
   const insets = useSafeAreaInsets();
-  const { orders, loading, getOrders } = useOrders();
+  const orders = useVendorStore((s) => s.orders);
+  const loading = useVendorStore((s) => s.ordersLoading);
+  const company = useVendorStore((s) => s.company);
+  const fetchAll = useVendorStore((s) => s.fetchAll);
+
   const [refreshing, setRefreshing] = useState(false);
-  const [profileImageUrl, setProfileImageUrl] = useState<string>("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png");
 
-  // Fetch orders when component mounts
-  useEffect(() => {
-    loadOrders();
-    loadProfileImage();
-  }, []);
+  const FALLBACK_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
+  const profileImageUrl = company?.logo_url || FALLBACK_IMAGE;
 
-  const loadOrders = async () => {
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      await getOrders();
+      await fetchAll();
     } catch (error) {
-      logger.error('Failed to load orders:', error);
+      logger.error('Failed to refresh orders:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to load orders. Please try again.'
+        text2: 'Failed to refresh orders. Please try again.'
       });
+    } finally {
+      setRefreshing(false);
     }
-  };
-
-  const loadProfileImage = async () => {
-    try {
-      const companyInfo = await getCompanyInfo();
-      if (companyInfo?.logo_url) {
-        setProfileImageUrl(companyInfo.logo_url);
-      }
-    } catch (error) {
-      logger.error('Failed to load profile image:', error);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadOrders();
-    await loadProfileImage();
-    setRefreshing(false);
-  };
+  }, [fetchAll]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -182,7 +166,7 @@ const OrdersScreen = () => {
 
               <Text style={styles.eventTitle}>{item.title}</Text>
               <Text style={styles.customerName} numberOfLines={1} ellipsizeMode="tail">{item.customerName}</Text>
-              
+
               <View style={styles.cardFooter}>
                 <View style={styles.dateContainer}>
                   <Calendar width={16} height={16} stroke="#57534e" />
