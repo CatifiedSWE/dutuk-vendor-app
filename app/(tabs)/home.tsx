@@ -3,11 +3,11 @@ import { useVendorStore } from '@/store/useVendorStore';
 import { buildAvailabilityMarkedDates, MarkedDatesMap, mergeAvailabilityWithEvents } from '@/utils/calendarAvailability';
 import logger from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,6 +16,7 @@ import {
   View
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const badgeConfigs = {
@@ -56,7 +57,7 @@ const OrderPreviewCard = ({ order }: { order: any }) => {
           <Ionicons name="calendar-outline" size={14} color="#57534e" />
           <Text style={styles.orderDateText}>{order.date}</Text>
         </View>
-        {order.amount && (
+        {Boolean(order.amount) && (
           <Text style={styles.orderAmountText}>₹{order.amount}</Text>
         )}
       </View>
@@ -65,18 +66,36 @@ const OrderPreviewCard = ({ order }: { order: any }) => {
 };
 
 const Home = () => {
-  // Store state
-  const allEvents = useVendorStore((s) => s.allEvents);
-  const company = useVendorStore((s) => s.company);
-  const requestsCount = useVendorStore((s) => s.requestsCount);
-  const pendingInquiries = useVendorStore((s) => s.pendingInquiries);
-  const calendarDates = useVendorStore((s) => s.calendarDates);
-  const reviewStats = useVendorStore((s) => s.reviewStats);
-  const reviews = useVendorStore((s) => s.reviews);
-  const fetchAll = useVendorStore((s) => s.fetchAll);
-  const isHydrated = useVendorStore((s) => s.isHydrated);
-  const orders = useVendorStore((s) => s.orders);
-  const ordersLoading = useVendorStore((s) => s.ordersLoading);
+  // Store state with optimized selection
+  const {
+    allEvents,
+    company,
+    requestsCount,
+    pendingInquiries,
+    calendarDates,
+    reviewStats,
+    reviews,
+    fetchAll,
+    isHydrated,
+    orders,
+    ordersLoading,
+    newOrderCount,
+  } = useVendorStore(
+    useShallow((s) => ({
+      allEvents: s.allEvents,
+      company: s.company,
+      requestsCount: s.requestsCount,
+      pendingInquiries: s.pendingInquiries,
+      calendarDates: s.calendarDates,
+      reviewStats: s.reviewStats,
+      reviews: s.reviews,
+      fetchAll: s.fetchAll,
+      isHydrated: s.isHydrated,
+      orders: s.orders,
+      ordersLoading: s.ordersLoading,
+      newOrderCount: s.newOrderCount,
+    }))
+  );
 
   // Local UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -201,13 +220,12 @@ const Home = () => {
               <Image
                 source={{ uri: profileImageUrl }}
                 style={styles.profileImage}
+                placeholder={placeholderImage}
+                cachePolicy="disk"
                 onLoadStart={() => setProfileImageLoading(true)}
                 onLoadEnd={() => setProfileImageLoading(false)}
-                onError={() => {
-                  setProfileImageLoading(false);
-                }}
               />
-              {profileImageLoading && (
+              {Boolean(profileImageLoading) && (
                 <View style={styles.profileImageLoadingOverlay}>
                   <ActivityIndicator color="#800000" size="small" />
                 </View>
@@ -223,10 +241,16 @@ const Home = () => {
         {/* SECTION 1: NEW ORDERS */}
         <View style={styles.ordersSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>New Orders</Text>
-            <View style={styles.orderCountBadge}>
-              <Text style={styles.orderCountText}>{orders.length}</Text>
+            <View style={styles.headerTitleGroup}>
+              <Text style={styles.sectionTitle}>New Orders</Text>
+              <View style={[styles.orderCountBadge, newOrderCount > 0 && styles.newOrderBadge]}>
+                <Text style={[styles.orderCountText, newOrderCount > 0 && styles.newOrderText]}>{orders.length}</Text>
+              </View>
+              {newOrderCount > 0 && <View style={styles.redDot} />}
             </View>
+            <Pressable onPress={() => router.push('/orders/allOrders' as any)}>
+              <Text style={styles.viewAllLink}>View All</Text>
+            </Pressable>
           </View>
 
           {orders.length === 0 ? (
@@ -306,61 +330,73 @@ const Home = () => {
           </View>
         </View>
 
-        {/* SECTION 3: CREATE EVENT CTA */}
-        <View style={styles.createEventSection}>
-          <Pressable
-            style={styles.createEventCTA}
-            onPress={() => router.push('/event/manage/createStepOne')}
-          >
-            <View style={styles.createEventIconCircle}>
-              <Ionicons name="add-circle" size={56} color="#800000" />
-            </View>
-            <View style={styles.createEventTextContainer}>
-              <Text style={styles.createEventTitle}>Create New Event</Text>
-              <Text style={styles.createEventSubtitle}>
-                Set up a new event to showcase to customers
-              </Text>
-            </View>
-            <View style={styles.createEventArrow}>
-              <Ionicons name="arrow-forward" size={24} color="#800000" />
-            </View>
-          </Pressable>
-
-          {/* Recently Managed Events Preview */}
-          {manageableEvents.length > 0 && (
-            <>
-              <View style={styles.manageEventsHeader}>
-                <Text style={styles.subsectionTitle}>Your Events</Text>
+        {/* SECTION 3: CREATE EVENT / YOUR EVENTS */}
+        {allEvents.length === 0 ? (
+          <View style={styles.createEventSection}>
+            <Pressable
+              style={styles.createEventCTA}
+              onPress={() => router.push('/event/manage/createStepOne')}
+            >
+              <View style={styles.createEventIconCircle}>
+                <Ionicons name="add-circle" size={56} color="#800000" />
+              </View>
+              <View style={styles.createEventTextContainer}>
+                <Text style={styles.createEventTitle}>Create New Event</Text>
+                <Text style={styles.createEventSubtitle}>
+                  Set up a new event to showcase to customers
+                </Text>
+              </View>
+              <View style={styles.createEventArrow}>
+                <Ionicons name="arrow-forward" size={24} color="#800000" />
+              </View>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.manageEventsWrapper}>
+            <View style={styles.manageEventsHeader}>
+              <Text style={styles.subsectionTitle}>Your Events</Text>
+              <View style={styles.headerActions}>
                 <Pressable onPress={() => router.push('/event')}>
                   <Text style={styles.viewAllLink}>View All</Text>
                 </Pressable>
               </View>
+            </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.manageEventsScroll}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.manageEventsScroll}
+            >
+              <Pressable
+                style={styles.manageCardSmall}
+                onPress={() => router.push('/event/manage/createStepOne')}
               >
-                {manageableEvents.slice(0, 3).map((item) => {
-                  const imageUri = item.image_url || item.banner_url || "";
-                  return (
-                    <Pressable
-                      key={item.id}
-                      style={styles.manageCardSmall}
-                      onPress={() => router.push(`/event/manage/${item.id}`)}
-                    >
-                      <Image
-                        source={imageUri ? { uri: imageUri } : placeholderImage}
-                        style={styles.manageCardImageSmall}
-                      />
-                      <Text style={styles.manageCardTitleSmall} numberOfLines={1}>{item.event}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </>
-          )}
-        </View>
+                <View style={styles.addEventCardImageSmall}>
+                  <Ionicons name="add-circle" size={48} color="#800000" />
+                </View>
+              </Pressable>
+
+              {manageableEvents.slice(0, 3).map((item) => {
+                const imageUri = item.image_url || item.banner_url || "";
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={styles.manageCardSmall}
+                    onPress={() => router.push(`/event/manage/${item.id}`)}
+                  >
+                    <Image
+                      source={imageUri ? { uri: imageUri } : placeholderImage}
+                      style={styles.manageCardImageSmall}
+                      placeholder={placeholderImage}
+                      cachePolicy="disk"
+                    />
+                    <Text style={styles.manageCardTitleSmall} numberOfLines={1}>{item.event}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Reviews Section */}
         <View style={styles.reviewsSection}>
@@ -428,12 +464,12 @@ const Home = () => {
                         <Text style={styles.reviewRatingText}>{review.rating}</Text>
                       </View>
                     </View>
-                    {review.review && (
+                    {Boolean(review.review) && (
                       <Text style={styles.reviewText} numberOfLines={3}>
                         "{review.review}"
                       </Text>
                     )}
-                    {review.verified_booking && (
+                    {Boolean(review.verified_booking) && (
                       <View style={styles.verifiedBadge}>
                         <Ionicons name="checkmark-circle" size={12} color="#34C759" />
                         <Text style={styles.verifiedText}>Verified Booking</Text>
@@ -446,7 +482,7 @@ const Home = () => {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView >
   );
 };
 
@@ -554,6 +590,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  newOrderBadge: {
+    backgroundColor: '#FF3B30',
+  },
+  newOrderText: {
+    color: '#FFFFFF',
+  },
+  redDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF3B30',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    position: 'absolute',
+    top: -2,
+    right: -2,
+  },
+  headerTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  smallAddButton: {
+    padding: 4,
+  },
+  manageEventsWrapper: {
+    marginTop: 10,
+    marginBottom: 64,
+  },
+  addEventCardImageSmall: {
+    width: 220,
+    height: 140,
+    borderRadius: 20,
+    marginBottom: 10,
+    backgroundColor: 'rgba(128, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(128, 0, 0, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addEventLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#800000',
+    marginTop: 4,
+    textTransform: 'uppercase',
   },
   orderCountText: {
     color: '#800000',
@@ -792,18 +882,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   manageCardSmall: {
-    width: 140,
-    marginRight: 16,
+    width: 220,
+    marginRight: 20,
   },
   manageCardImageSmall: {
-    width: 140,
-    height: 90,
-    borderRadius: 16,
-    marginBottom: 8,
+    width: 220,
+    height: 140,
+    borderRadius: 20,
+    marginBottom: 10,
   },
   manageCardTitleSmall: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1c1917',
   },
 

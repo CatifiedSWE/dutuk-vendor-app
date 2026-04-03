@@ -13,13 +13,12 @@ interface BottomNavigationProps {
 }
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab }) => {
-  const handleHome = () => router.replace('/(tabs)/home' as any);
-  const handleOrders = () => {
-    if (activeTab !== 'orders') router.replace('/(tabs)/orders' as any);
+  const navigateToTab = (tabName: string) => {
+    if (activeTab !== tabName) {
+      router.navigate(`/(tabs)/${tabName}` as any);
+    }
   };
-  const handleProfile = () => {
-    if (activeTab !== 'profile') router.replace('/(tabs)/profile' as any);
-  };
+
   const handleCreateEvent = () => {
     router.push('/event/manage/createStepOne' as any);
   };
@@ -27,7 +26,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab }) => {
   return (
     <View style={styles.bottomNavbar}>
       {/* Home */}
-      <Pressable style={styles.navItem} onPress={handleHome}>
+      <Pressable style={styles.navItem} onPress={() => navigateToTab('home')}>
         <Home
           width={24}
           height={24}
@@ -39,7 +38,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab }) => {
       </Pressable>
 
       {/* Chat */}
-      <Pressable style={styles.navItem} onPress={() => router.replace('/(tabs)/chat' as any)}>
+      <Pressable style={styles.navItem} onPress={() => navigateToTab('chat')}>
         <MessageCircle
           width={24}
           height={24}
@@ -64,7 +63,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab }) => {
       </View>
 
       {/* Calendar */}
-      <Pressable style={styles.navItem} onPress={() => router.replace('/(tabs)/calendar' as any)}>
+      <Pressable style={styles.navItem} onPress={() => navigateToTab('calendar')}>
         <Calendar
           width={24}
           height={24}
@@ -76,7 +75,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab }) => {
       </Pressable>
 
       {/* Profile */}
-      <Pressable style={styles.navItem} onPress={handleProfile}>
+      <Pressable style={styles.navItem} onPress={() => navigateToTab('profile')}>
         <User
           width={24}
           height={24}

@@ -3,6 +3,7 @@ import { zustandMMKVStorage } from '@/utils/storage';
 import { supabase } from '@/utils/supabase';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from './useAuthStore';
 
 // =====================================================
@@ -29,6 +30,32 @@ export interface StoredDate {
     status: 'available' | 'unavailable';
     event?: string;
     description?: string;
+}
+
+export interface Conversation {
+    id: string;
+    customer_id: string;
+    vendor_id: string;
+    terms_accepted_by_customer: boolean;
+    terms_accepted_at: string | null;
+    payment_completed: boolean;
+    payment_completed_at: string | null;
+    booking_id: string | null;
+    last_message_at: string;
+    last_message_preview: string | null;
+    created_at: string;
+    updated_at: string;
+    customer_name: string | null;
+    customer_avatar: string | null;
+    customer_email: string | null;
+    vendor_name: string | null;
+    vendor_avatar: string | null;
+    vendor_company: string | null;
+    vendor_email: string | null;
+}
+
+export interface ConversationWithUnread extends Conversation {
+    unread_count: number;
 }
 
 interface VendorState {
@@ -70,8 +97,13 @@ interface VendorState {
     payments: any[];
     paymentsLoading: boolean;
 
+    // Chat
+    conversations: ConversationWithUnread[];
+    conversationsLoading: boolean;
+
     // Actions
     fetchAll: () => Promise<void>;
+    fetchCritical: () => Promise<void>;
     fetchCompany: () => Promise<void>;
     fetchEvents: () => Promise<void>;
     fetchOrders: () => Promise<void>;
@@ -80,7 +112,10 @@ interface VendorState {
     fetchReviews: (limit?: number) => Promise<void>;
     fetchEarnings: () => Promise<void>;
     fetchPayments: () => Promise<void>;
+    fetchConversations: () => Promise<void>;
     setOrders: (orders: Order[]) => void;
+    addEvent: (event: any) => void;
+    removeEvent: (eventId: string) => void;
     incrementNewOrderCount: () => void;
     resetNewOrderCount: () => void;
     updateOrderInStore: (orderId: string, updates: Partial<Order>) => void;
@@ -135,6 +170,8 @@ export const useVendorStore = create<VendorState>()(
             earningsLoading: false,
             payments: [],
             paymentsLoading: false,
+            conversations: [],
+            conversationsLoading: false,
 
             fetchEarnings: async () => {
                 const userId = useAuthStore.getState().userId;
@@ -175,26 +212,64 @@ export const useVendorStore = create<VendorState>()(
                 }
             },
 
-            fetchAll: async () => {
+            fetchConversations: async () => {
                 const userId = useAuthStore.getState().userId;
                 if (!userId) return;
 
-                logger.log('Fetching all vendor data...');
+                set({ conversationsLoading: true });
+                const { data: conversationsData, error } = await supabase
+                    .from('conversations_with_users')
+                    .select('*')
+                    .eq('vendor_id', userId)
+                    .order('last_message_at', { ascending: false });
 
-                // Parallel fetch all data in ONE batch
+                if (error) {
+                    logger.error('Error fetching conversations:', error);
+                    set({ conversationsLoading: false });
+                    return;
+                }
+
+                // Fetch unread counts in parallel
+                const { data: unreadData } = await supabase
+                    .rpc('get_unread_count', { user_id_param: userId });
+
+                const conversationsWithUnread = (conversationsData || []).map((conv: any) => ({
+                    ...conv,
+                    unread_count: unreadData?.find((u: any) => u.conversation_id === conv.id)?.unread_count || 0,
+                }));
+
+                set({ conversations: conversationsWithUnread, conversationsLoading: false });
+            },
+
+            fetchAll: async () => {
+                await get().fetchCritical();
+            },
+
+            fetchCritical: async () => {
+                const userId = useAuthStore.getState().userId;
+                if (!userId) return;
+
+                logger.log('Fetching critical vendor data...');
+
+                // Phase 1: Critical data for tab display
                 await Promise.allSettled([
                     get().fetchCompany(),
                     get().fetchEvents(),
                     get().fetchOrders(),
                     get().fetchCalendarDates(),
-                    get().fetchRequestsCount(),
-                    get().fetchReviews(10), // Fetch last 10 reviews
-                    get().fetchEarnings(),
-                    get().fetchPayments(),
+                    get().fetchConversations(),
                 ]);
 
                 set({ lastFetchedAt: Date.now(), isHydrated: true });
-                logger.log('Vendor data hydration complete');
+                logger.log('Critical vendor data hydration complete');
+
+                // Phase 2: Deferred data (non-blocking)
+                Promise.allSettled([
+                    get().fetchRequestsCount(),
+                    get().fetchReviews(10),
+                    get().fetchEarnings(),
+                    get().fetchPayments(),
+                ]);
             },
 
             fetchCompany: async () => {
@@ -364,6 +439,14 @@ export const useVendorStore = create<VendorState>()(
             setOrders: (orders) => set({ orders }),
             incrementNewOrderCount: () => set((s) => ({ newOrderCount: s.newOrderCount + 1 })),
             resetNewOrderCount: () => set({ newOrderCount: 0 }),
+            addEvent: (event) => set((s) => ({
+                allEvents: [event, ...s.allEvents],
+            })),
+
+            removeEvent: (eventId) => set((s) => ({
+                allEvents: s.allEvents.filter((e) => e.id !== eventId),
+            })),
+
             updateOrderInStore: (orderId, updates) => set((s) => ({
                 orders: s.orders.map((o: Order) => o.id === orderId ? { ...o, ...updates } : o),
             })),
@@ -379,7 +462,7 @@ export const useVendorStore = create<VendorState>()(
 // SELECTORS
 // =====================================================
 
-export const useUpcomingEvents = () => useVendorStore((s) => s.allEvents.filter((e: any) => e.status === 'upcoming'));
-export const useOngoingEvents = () => useVendorStore((s) => s.allEvents.filter((e: any) => e.status === 'ongoing'));
-export const useCompletedEvents = () => useVendorStore((s) => s.allEvents.filter((e: any) => e.status === 'completed'));
-export const useManageableEvents = () => useVendorStore((s) => s.allEvents.filter((e: any) => e.status !== 'completed'));
+export const useUpcomingEvents = () => useVendorStore(useShallow((s) => s.allEvents.filter((e: any) => e.status === 'upcoming')));
+export const useOngoingEvents = () => useVendorStore(useShallow((s) => s.allEvents.filter((e: any) => e.status === 'ongoing')));
+export const useCompletedEvents = () => useVendorStore(useShallow((s) => s.allEvents.filter((e: any) => e.status === 'completed')));
+export const useManageableEvents = () => useVendorStore(useShallow((s) => s.allEvents.filter((e: any) => e.status !== 'completed')));

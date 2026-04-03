@@ -1,33 +1,41 @@
-import { ConversationWithUnread, useVendorConversations } from '@/hooks/chat/useConversations';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { ConversationWithUnread, useVendorStore } from '@/store/useVendorStore';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    Image,
     Pressable,
     RefreshControl,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { ChevronRight, MessageCircle } from 'react-native-feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 
 export default function ChatScreen() {
-    const { conversations, loading, error, refetch, totalUnread } = useVendorConversations();
-    const [refreshing, setRefreshing] = useState(false);
-
-    // Refetch on screen focus
-    useFocusEffect(
-        useCallback(() => {
-            refetch();
-        }, [refetch])
+    const { conversations, loading, fetchConversations } = useVendorStore(
+        useShallow((s) => ({
+            conversations: s.conversations,
+            loading: s.conversationsLoading,
+            fetchConversations: s.fetchConversations,
+        }))
     );
+
+    const totalUnread = useMemo(() =>
+        conversations.reduce((sum, conv) => sum + conv.unread_count, 0),
+        [conversations]
+    );
+
+    const [refreshing, setRefreshing] = useState(false);
+    const error = null; // Error handling moved to store/logger
+
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await refetch();
+        await fetchConversations();
         setRefreshing(false);
     };
 
@@ -70,7 +78,12 @@ export default function ChatScreen() {
             {/* Avatar */}
             <View style={styles.avatarContainer}>
                 {item.customer_avatar ? (
-                    <Image source={{ uri: item.customer_avatar }} style={styles.avatar} />
+                    <Image
+                        source={{ uri: item.customer_avatar }}
+                        style={styles.avatar}
+                        cachePolicy="disk"
+                        transition={200}
+                    />
                 ) : (
                     <View style={styles.avatarPlaceholder}>
                         <Text style={styles.avatarText}>
@@ -150,7 +163,7 @@ export default function ChatScreen() {
                 </View>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>Failed to load conversations</Text>
-                    <Pressable style={styles.retryButton} onPress={refetch}>
+                    <Pressable style={styles.retryButton} onPress={fetchConversations}>
                         <Text style={styles.retryText}>Retry</Text>
                     </Pressable>
                 </View>

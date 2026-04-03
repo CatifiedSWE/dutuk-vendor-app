@@ -12,6 +12,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'none',
+        lazy: false,
       }}
     >
       <Tabs.Screen

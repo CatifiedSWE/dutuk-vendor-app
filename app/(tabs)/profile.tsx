@@ -15,11 +15,16 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from 'react-native-toast-message';
+import { useShallow } from 'zustand/react/shallow';
 
 const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
-  const company = useVendorStore((s) => s.company);
-  const loading = useVendorStore((s) => s.companyLoading);
+  const { company, loading } = useVendorStore(
+    useShallow((s) => ({
+      company: s.company,
+      loading: s.companyLoading,
+    }))
+  );
   const logoutStore = useAuthStore((s) => s.logout);
 
   const menuItems = [

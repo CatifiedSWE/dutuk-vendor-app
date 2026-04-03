@@ -1,5 +1,6 @@
 import KeyboardSafeView from "@/components/KeyboardSafeView";
 import createEvent from "@/hooks/createEvent";
+import { useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -96,7 +97,7 @@ const CreateEventStepTwo = () => {
 
         setSaving(true);
         try {
-            await createEvent({
+            const newEvent = await createEvent({
                 event: eventTitle,
                 description: description.trim() || undefined,
                 payment: paymentAmount,
@@ -106,14 +107,20 @@ const CreateEventStepTwo = () => {
                 image_url: eventImageUrl,
             });
 
+            // Optimistic update
+            useVendorStore.getState().addEvent(newEvent);
+
+            // Sync in background
+            useVendorStore.getState().fetchEvents();
+
             Toast.show({
                 type: "success",
                 text1: "Event Created",
                 text2: "Your event has been added successfully.",
             });
 
-            // Navigate to home
-            router.replace('/(tabs)/home' as any);
+            // Redirect to home immediately
+            router.navigate('/(tabs)/home' as any);
         } catch (error) {
             Toast.show({
                 type: "error",

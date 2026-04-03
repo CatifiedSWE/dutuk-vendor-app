@@ -2,11 +2,11 @@ import logger from '@/utils/logger';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { Bell, Calendar, Clock, Edit, FileText, User } from 'react-native-feather';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +27,7 @@ const OrdersScreen = () => {
     },
     {
       id: '55D90',
-      title: 'Birthday Party', 
+      title: 'Birthday Party',
       customerName: 'Praveen Kumar',
       status: 'approved',
       date: '13-10-2025',
@@ -36,7 +36,7 @@ const OrdersScreen = () => {
     {
       id: '55D90',
       title: 'Marriage Function',
-      customerName: 'Mohan Raj', 
+      customerName: 'Mohan Raj',
       status: 'done',
       date: '11-10-2025',
       time: '7:00am - 4pm'
@@ -50,7 +50,7 @@ const OrdersScreen = () => {
         {/* Left Icons Group */}
         <View style={styles.leftIconsGroup}>
           {/* Notification Bell */}
-          <Pressable 
+          <Pressable
             style={styles.headerIcon}
             onPress={() => {
               // Navigate to notifications or show notification panel
@@ -59,21 +59,21 @@ const OrdersScreen = () => {
           >
             <Bell width={24} height={24} stroke="#000000" />
           </Pressable>
-          
+
           {/* Calendar Icon */}
-          <Pressable 
+          <Pressable
             style={styles.headerIcon}
             onPress={() => {
               // Navigate to calendar page
-              router.push('/profilePages/calender/CalendarPage');
+              router.push('/profilePages/calendar/CalendarPage');
             }}
           >
             <Calendar width={24} height={24} stroke="#000000" />
           </Pressable>
         </View>
-        
+
         {/* Profile Icon */}
-        <Pressable 
+        <Pressable
           style={styles.profileIcon}
           onPress={() => {
             // Navigate to profile page
@@ -85,7 +85,7 @@ const OrdersScreen = () => {
           </View>
         </Pressable>
       </View>
-      
+
       <FlatList
         data={orders}
         keyExtractor={(item, index) => `${item.id}-${index}`}
@@ -115,8 +115,8 @@ const OrdersScreen = () => {
           return (
             <Pressable
               style={styles.orderCard}
-              
-              onPress={ () =>  router.push({
+
+              onPress={() => router.push({
                 pathname: goTo,
                 params: {
                   orderId: item.id,

@@ -26,7 +26,7 @@ export type RootStackParamList = {
   'requests/menu': undefined;
   profilePages: undefined;
   'profilePages/profile': undefined;
-  'profilePages/calender/CalendarPage': undefined;
+  'profilePages/calendar/CalendarPage': undefined;
   public: undefined;
 };
 

@@ -73,8 +73,29 @@ export function setupRealtimeSubscriptions() {
             filter: `vendor_id=eq.${userId}`,
         }, (payload) => {
             logger.log('New review received via realtime');
-            // Refresh reviews to get updated list and stats
             useVendorStore.getState().fetchReviews(10);
+        })
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'conversations',
+            filter: `vendor_id=eq.${userId}`,
+        }, (payload) => {
+            logger.log('Conversation update received via realtime');
+            useVendorStore.getState().fetchConversations();
+        })
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+        }, (payload) => {
+            // Only refresh if message is for one of the vendor's conversations
+            const conversations = useVendorStore.getState().conversations;
+            const isRelevant = conversations.some(c => c.id === payload.new.conversation_id);
+            if (isRelevant) {
+                logger.log('New relevant message received via realtime');
+                useVendorStore.getState().fetchConversations();
+            }
         })
         .subscribe((status) => {
             logger.log(`Unified realtime status: ${status}`);

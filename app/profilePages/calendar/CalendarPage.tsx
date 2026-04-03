@@ -1,12 +1,11 @@
-import logger from '@/utils/logger';
 // BACKEND INTEGRATION ENABLED - USING SUPABASE FOR DATABASE SYNC
 import UnifiedCalendar from "@/components/UnifiedCalendar";
-import getStoredDates, { StoredDate } from "@/hooks/getStoredDates";
 import { DateStatus, removeDate, storeDateWithStatus } from "@/hooks/useStoreDates";
+import { useVendorStore } from '@/store/useVendorStore';
 import { buildAvailabilityMarkedDates } from "@/utils/calendarAvailability";
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from 'react-native-toast-message';
 
@@ -19,30 +18,14 @@ const isPastDate = (dateString: string): boolean => {
 };
 
 const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) => {
-  const [isAllowed, setAllowed] = useState(false);
-  const [calendarDates, setCalendarDates] = useState<StoredDate[]>([]);
+  const calendarDates = useVendorStore((s) => s.calendarDates);
+  const fetchCalendarDates = useVendorStore((s) => s.fetchCalendarDates);
+  const isHydrated = useVendorStore((s) => s.isHydrated);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Fetch dates from Supabase database
-  const getDates = async () => {
-    try {
-      const storedDates = await getStoredDates();
-      logger.log('Loaded dates from Supabase:', storedDates);
-      setCalendarDates(storedDates || []);
-      setAllowed(true);
-    } catch (error) {
-      logger.error('Error loading dates:', error);
-      setAllowed(true);
-    }
-  };
 
   // Convert calendar dates to marked dates format for UnifiedCalendar
   // Using shared utility - this is the SINGLE SOURCE OF TRUTH for availability logic
   const markedDates = buildAvailabilityMarkedDates(calendarDates);
-
-  useEffect(() => {
-    getDates();
-  }, []);
 
   const handleDayPress = async (day: number, dateString: string) => {
     // Validate: Cannot mark past dates
@@ -81,7 +64,7 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
                 existingDate.description
               );
               if (success) {
-                await getDates(); // Reload from database
+                await fetchCalendarDates(); // Reload from database via store
                 Toast.show({
                   type: 'success',
                   text1: 'Status Updated',
@@ -106,7 +89,7 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
               setIsSaving(true);
               const success = await removeDate(dateString);
               if (success) {
-                await getDates(); // Reload from database
+                await fetchCalendarDates(); // Reload from database via store
                 Toast.show({
                   type: 'success',
                   text1: 'Date Removed',
@@ -143,7 +126,7 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
               setIsSaving(true);
               const success = await storeDateWithStatus(dateString, 'available');
               if (success) {
-                await getDates(); // Reload from database
+                await fetchCalendarDates(); // Reload from database via store
                 Toast.show({
                   type: 'success',
                   text1: 'Date Marked',
@@ -168,7 +151,7 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
               setIsSaving(true);
               const success = await storeDateWithStatus(dateString, 'unavailable');
               if (success) {
-                await getDates(); // Reload from database
+                await fetchCalendarDates(); // Reload from database via store
                 Toast.show({
                   type: 'success',
                   text1: 'Date Marked',
@@ -192,65 +175,7 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
     }
   };
 
-  if (isAllowed) {
-    const today = new Date();
-    const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-    return (
-      <View style={style.container}>
-        {/* Back Button */}
-        {!hideBackButton && (
-          <Pressable
-            style={style.backButton}
-            onPress={() => router.back()}
-            data-testid="calendar-back-button"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000ff" />
-          </Pressable>
-        )}
-
-        <View style={style.headerContainer}>
-          <Text style={style.headerTitle}>Manage Availability</Text>
-          <Text style={style.headerSubtitle}>
-            Tap a date to mark your availability
-          </Text>
-        </View>
-
-        <View style={style.legendContainer}>
-          <View style={style.legendItem}>
-            <View style={[style.legendBox, { backgroundColor: '#000000' }]} />
-            <Text style={style.legendText}>Available</Text>
-          </View>
-          <View style={style.legendItem}>
-            <View style={[style.legendBox, { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#FF3B30' }]} />
-            <Text style={[style.legendText, { color: '#FF3B30' }]}>Unavailable</Text>
-          </View>
-        </View>
-
-        <View style={style.calendarCard}>
-          <UnifiedCalendar
-            onDayPress={handleDayPress}
-            markedDates={markedDates}
-            minDate={minDate}
-          />
-        </View>
-
-        <View style={style.instructionContainer}>
-          <Ionicons name="cloud-done-outline" size={20} color="#34C759" />
-          <Text style={style.instructionText}>
-            Changes are synced to the cloud
-          </Text>
-        </View>
-
-        {isSaving && (
-          <View style={style.savingOverlay}>
-            <ActivityIndicator size="small" color="#800000" />
-            <Text style={style.savingText}>Saving...</Text>
-          </View>
-        )}
-      </View>
-    );
-  } else {
+  if (!isHydrated) {
     return (
       <View style={style.container}>
         <ActivityIndicator size="large" color="#800000" />
@@ -258,19 +183,81 @@ const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) 
       </View>
     );
   }
+
+  const today = new Date();
+  const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  return (
+    <View style={style.container}>
+      {/* Back Button */}
+      {!hideBackButton && (
+        <Pressable
+          style={style.backButton}
+          onPress={() => router.back()}
+          data-testid="calendar-back-button"
+        >
+          <Ionicons name="arrow-back" size={24} color="#000000ff" />
+        </Pressable>
+      )}
+
+      <View style={style.headerContainer}>
+        <View style={style.titleRow}>
+          <Text style={style.headerTitle}>Manage Availability</Text>
+          <Ionicons name="calendar-outline" size={24} color="#800000" />
+        </View>
+        <Text style={style.headerSubtitle}>
+          Tap a date to mark your availability and keep your schedule up to date
+        </Text>
+      </View>
+
+      <View style={style.legendContainer}>
+        <View style={[style.legendChip, { backgroundColor: '#1c1917' }]}>
+          <View style={[style.legendDot, { backgroundColor: '#FFFFFF' }]} />
+          <Text style={style.legendChipText}>Available</Text>
+        </View>
+        <View style={[style.legendChip, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FF3B30' }]}>
+          <View style={[style.legendDot, { backgroundColor: '#FF3B30' }]} />
+          <Text style={[style.legendChipText, { color: '#FF3B30' }]}>Unavailable</Text>
+        </View>
+      </View>
+
+      <View style={style.calendarCard}>
+        <UnifiedCalendar
+          onDayPress={handleDayPress}
+          markedDates={markedDates}
+          minDate={minDate}
+        />
+      </View>
+
+      <View style={style.instructionContainer}>
+        <View style={style.syncIndicator}>
+          <Ionicons name="cloud-done" size={16} color="#34C759" />
+          <Text style={style.instructionText}>
+            Cloud Syched
+          </Text>
+        </View>
+      </View>
+
+      {isSaving && (
+        <View style={style.savingOverlay}>
+          <ActivityIndicator size="small" color="#800000" />
+          <Text style={style.savingText}>Syncing...</Text>
+        </View>
+      )}
+    </View>
+  );
 };
 
 const style = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: '#faf8f5',
     paddingVertical: 10,
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 20,
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -280,108 +267,133 @@ const style = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#800000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 12,
     elevation: 3,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
-    marginTop: 30,
+    marginBottom: 24,
+    paddingHorizontal: 24,
+    marginTop: 20, // Reduced from 100
+    width: '100%',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#800000',
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1c1917',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#57534e',
+    color: '#78716c',
     textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: '85%',
   },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    gap: 20,
+    marginBottom: 24,
+    gap: 12,
   },
-  legendItem: {
+  legendChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
     gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  legendBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  legendText: {
-    fontSize: 13,
-    color: '#1c1917',
-    fontWeight: '500',
+  legendChipText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   calendarCard: {
-    width: 350,
-    borderRadius: 24,
+    width: '92%',
+    maxWidth: 400,
+    borderRadius: 32,
     backgroundColor: '#FFFFFF',
     shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowRadius: 24,
+    elevation: 5,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.06)',
+    borderColor: 'rgba(128, 0, 0, 0.04)',
+    marginBottom: 20,
   },
   instructionContainer: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+  },
+  syncIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    paddingHorizontal: 20,
-    gap: 8,
+    backgroundColor: 'rgba(52, 199, 89, 0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
   },
   instructionText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#34C759',
-    textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 15,
     color: '#57534e',
+    fontWeight: '500',
   },
   savingOverlay: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 50,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#800000',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-    gap: 8,
+    shadowRadius: 16,
+    elevation: 6,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(128, 0, 0, 0.08)',
   },
   savingText: {
     fontSize: 14,
     color: '#800000',
-    fontWeight: '500',
+    fontWeight: '700',
   },
 });
 

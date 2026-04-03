@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
@@ -21,18 +22,13 @@ const storeDateWithStatus = async (
   description?: string
 ): Promise<boolean> => {
   try {
-    // Get the current user from the session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Get the current user from the store
+    const userId = useAuthStore.getState().userId;
 
-    if (authError || !user) {
-      logger.error("Authentication error:", authError);
+    if (!userId) {
+      logger.error("No authenticated user found in store");
       return false;
     }
-
-    const userId = user.id;
 
     // Check if date already exists for this user
     const { data: existing, error: fetchError } = await supabase
@@ -96,20 +92,18 @@ const storeDateWithStatus = async (
  */
 const removeDate = async (date: string): Promise<boolean> => {
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Get user id from store
+    const userId = useAuthStore.getState().userId;
 
-    if (authError || !user) {
-      logger.error("Authentication error:", authError);
+    if (!userId) {
+      logger.error("No authenticated user found in store");
       return false;
     }
 
     const { error: deleteError } = await supabase
       .from("dates")
       .delete()
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("date", date);
 
     if (deleteError) {

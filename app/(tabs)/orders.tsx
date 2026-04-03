@@ -63,7 +63,7 @@ const OrdersScreen = () => {
           <Pressable
             style={styles.headerIcon}
             onPress={() => {
-              router.push('/profilePages/calender/CalendarPage');
+              router.push('/profilePages/calendar/CalendarPage');
             }}
           >
             <Calendar width={22} height={22} stroke="#1c1917" />

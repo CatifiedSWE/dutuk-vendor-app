@@ -16,7 +16,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const fetchAll = useVendorStore((s) => s.fetchAll);
+  const fetchCritical = useVendorStore((s) => s.fetchCritical);
 
   useEffect(() => {
     // Hide splash screen immediately to prevent hanging
@@ -28,15 +28,15 @@ export default function RootLayout() {
     initialize();
   }, []);
 
-  // When user authenticates, fetch all vendor data in one batch + setup unified realtime channel
+  // When user authenticates, fetch critical vendor data + setup unified realtime channel
   useEffect(() => {
     if (isAuthenticated) {
-      fetchAll();
+      fetchCritical();
       setupRealtimeSubscriptions();
     } else {
       teardownRealtimeSubscriptions();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchCritical]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

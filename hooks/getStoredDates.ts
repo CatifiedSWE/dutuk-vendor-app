@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/store/useAuthStore';
 import logger from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 
@@ -14,11 +15,11 @@ export interface StoredDate {
  */
 const getStoredDates = async (): Promise<StoredDate[]> => {
     try {
-        // 1. Get current authenticated user
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // 1. Get current authenticated user id from store
+        const userId = useAuthStore.getState().userId;
 
-        if (authError || !user) {
-            logger.error('Authentication error fetching dates:', authError);
+        if (!userId) {
+            logger.error('No authenticated user found in store');
             return [];
         }
 
@@ -26,7 +27,7 @@ const getStoredDates = async (): Promise<StoredDate[]> => {
         const { data, error } = await supabase
             .from('dates')
             .select('date, status, event, description')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .order('date', { ascending: true });
 
         if (error) {
