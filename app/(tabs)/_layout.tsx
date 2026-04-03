@@ -1,45 +1,9 @@
-import { useVendorStore } from '@/store/useVendorStore';
 import { Tabs } from "expo-router";
-import { Text, View } from 'react-native';
-import { FileText, Home, MessageCircle, User } from 'react-native-feather';
+import { Calendar, Home, MessageCircle, User } from 'react-native-feather';
 
 // Custom tab icon with badge for orders
-function OrdersTabIcon({ color, focused, badgeCount }: { color: string; focused: boolean; badgeCount: number }) {
-  return (
-    <View style={{ position: 'relative' }}>
-      <FileText
-        width={24}
-        height={24}
-        stroke={color}
-        strokeWidth={focused ? 2.5 : 2}
-      />
-      {badgeCount > 0 && (
-        <View
-          style={{
-            position: 'absolute',
-            top: -6,
-            right: -10,
-            backgroundColor: '#FF3B30',
-            borderRadius: 10,
-            minWidth: 18,
-            height: 18,
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingHorizontal: 4,
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-            {badgeCount > 99 ? '99+' : badgeCount}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 export default function TabLayout() {
-  const newOrderCount = useVendorStore((s) => s.newOrderCount);
-  const resetNewOrderCount = useVendorStore((s) => s.resetNewOrderCount);
 
   return (
     <Tabs
@@ -97,18 +61,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="orders"
+        name="calendar"
         options={{
-          title: 'Orders',
+          title: 'Calendar',
           tabBarIcon: ({ color, focused }) => (
-            <OrdersTabIcon color={color} focused={focused} badgeCount={newOrderCount} />
+            <Calendar
+              width={24}
+              height={24}
+              stroke={color}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
-        }}
-        listeners={{
-          tabPress: () => {
-            // Clear notification count when orders tab is pressed
-            resetNewOrderCount();
-          },
         }}
       />
       <Tabs.Screen

@@ -1,6 +1,5 @@
 import placeholderImage from "@/assets/avatar.jpg";
-import UnifiedCalendar from '@/components/UnifiedCalendar';
-import { useVendorStore } from '@/store/useVendorStore'; // Added
+import { useVendorStore } from '@/store/useVendorStore';
 import { buildAvailabilityMarkedDates, MarkedDatesMap, mergeAvailabilityWithEvents } from '@/utils/calendarAvailability';
 import logger from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,53 @@ import {
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const StatusBadge = ({ status }: { status: string }) => {
+  const badgeConfigs = {
+    pending: { bg: 'rgba(128, 0, 0, 0.08)', text: '#800000' },
+    approved: { bg: '#34C75915', text: '#34C759' },
+    completed: { bg: '#1c1917', text: '#FFFFFF' },
+    rejected: { bg: '#FF3B30', text: '#FFFFFF' }
+  };
+  const config = (badgeConfigs as any)[status] || badgeConfigs.pending;
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+      <Text style={[styles.statusText, { color: config.text }]}>
+        {status.toUpperCase()}
+      </Text>
+    </View>
+  );
+};
+
+const OrderPreviewCard = ({ order }: { order: any }) => (
+  <Pressable
+    style={styles.orderPreviewCard}
+    onPress={() => router.push({
+      pathname: order.status === 'pending'
+        ? '/orders/customerApproval'
+        : '/orders/customerDetails',
+      params: { orderId: order.id }
+    })}
+  >
+    <View style={styles.orderCardHeader}>
+      <Text style={styles.orderIdText}>#{order.id.substring(0, 8).toUpperCase()}</Text>
+      <StatusBadge status={order.status} />
+    </View>
+
+    <Text style={styles.orderTitleText} numberOfLines={1}>{order.title}</Text>
+    <Text style={styles.orderCustomerText} numberOfLines={1}>{order.customerName}</Text>
+
+    <View style={styles.orderCardFooter}>
+      <View style={styles.orderDateContainer}>
+        <Ionicons name="calendar-outline" size={14} color="#57534e" />
+        <Text style={styles.orderDateText}>{order.date}</Text>
+      </View>
+      {order.amount && (
+        <Text style={styles.orderAmountText}>₹{order.amount}</Text>
+      )}
+    </View>
+  </Pressable>
+);
+
 const Home = () => {
   // Store state
   const allEvents = useVendorStore((s) => s.allEvents);
@@ -29,6 +75,8 @@ const Home = () => {
   const reviews = useVendorStore((s) => s.reviews);
   const fetchAll = useVendorStore((s) => s.fetchAll);
   const isHydrated = useVendorStore((s) => s.isHydrated);
+  const orders = useVendorStore((s) => s.orders);
+  const ordersLoading = useVendorStore((s) => s.ordersLoading);
 
   // Local UI state
   const [refreshing, setRefreshing] = useState(false);
@@ -59,6 +107,42 @@ const Home = () => {
 
     return mergeAvailabilityWithEvents(availabilityMarked, eventMarked);
   }, [allEvents, calendarDates]);
+
+  // Analytics Calculation
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Past earnings calculation
+    const completedEvents = allEvents.filter(e => e.status === 'completed');
+    const totalEarnings = completedEvents.reduce((sum, e) => sum + (e.payment || 0), 0);
+
+    // This month's earnings
+    const thisMonthEvents = completedEvents.filter(e => {
+      const eventDate = new Date(e.start_date);
+      return eventDate.getMonth() === currentMonth &&
+        eventDate.getFullYear() === currentYear;
+    });
+    const thisMonthEarnings = thisMonthEvents.reduce((sum, e) => sum + (e.payment || 0), 0);
+
+    // Past events count
+    const pastEventsCount = completedEvents.length;
+    const thisMonthEventsCount = thisMonthEvents.length;
+
+    // Average rating
+    const avgRating = reviewStats.averageRating || 0;
+    const totalReviews = reviewStats.totalReviews || 0;
+
+    return {
+      totalEarnings,
+      thisMonthEarnings,
+      pastEventsCount,
+      thisMonthEventsCount,
+      avgRating,
+      totalReviews
+    };
+  }, [allEvents, reviewStats]);
 
   const handleImageLoadStart = (eventId: string) => {
     setImageLoadingStates(prev => ({ ...prev, [eventId]: true }));
@@ -107,13 +191,13 @@ const Home = () => {
               <Pressable style={styles.iconButton}>
                 <Ionicons name="notifications-outline" size={26} color="#1c1917" />
               </Pressable>
-              <Pressable style={styles.iconButton} onPress={() => router.push("/profilePages/calender/CalendarPage")}>
+              <Pressable style={styles.iconButton} onPress={() => router.push("/calendar" as any)}>
                 <Ionicons name="calendar-outline" size={26} color="#1c1917" />
               </Pressable>
             </View>
 
             {/* Right group */}
-            <Pressable style={styles.profileIcon} onPress={() => router.push("/profilePages/editProfile")}>
+            <Pressable style={styles.profileIcon} onPress={() => router.push("/profile")}>
               <Image
                 source={{ uri: profileImageUrl }}
                 style={styles.profileImage}
@@ -136,286 +220,146 @@ const Home = () => {
           <Text style={styles.title}>Home</Text>
         </View>
 
-        {/* Calendar Section - FOCAL POINT */}
-        <View style={styles.calendarSection}>
-          <View style={styles.calendarHeader}>
-            <Text style={styles.calendarTitle}>Your Calendar</Text>
-            <Pressable onPress={() => router.push("/profilePages/calender/CalendarPage")}>
-              <Text style={styles.calendarLink}>Manage</Text>
-            </Pressable>
-          </View>
-          <Pressable
-            style={styles.calendarWrapper}
-            onPress={() => router.push("/profilePages/calender/CalendarPage")}
-          >
-            <UnifiedCalendar
-              markedDates={markedDates}
-              disabled={true}
-            />
-          </Pressable>
-        </View>
-
-        {/* Manage Events Section */}
-        <View style={styles.manageSection}>
-          <View style={styles.manageHeader}>
-            <Text style={styles.sectionTitle}>Manage Events</Text>
-            <Pressable
-              style={styles.createButton}
-              onPress={() => router.push("/event/manage/create")}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Create</Text>
-            </Pressable>
+        {/* SECTION 1: NEW ORDERS */}
+        <View style={styles.ordersSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>New Orders</Text>
+            <View style={styles.orderCountBadge}>
+              <Text style={styles.orderCountText}>{orders.length}</Text>
+            </View>
           </View>
 
-          {manageableEvents.length === 0 ? (
-            <Pressable
-              style={styles.emptyManageCard}
-              onPress={() => router.push("/event/manage/create")}
-            >
-              <Ionicons name="calendar-outline" size={40} color="#800000" />
-              <Text style={styles.emptyManageTitle}>Create your first event</Text>
-              <Text style={styles.emptyManageSubtitle}>
-                Start building your event portfolio and showcase it to customers.
+          {orders.length === 0 ? (
+            <View style={styles.emptyOrdersCard}>
+              <Ionicons name="file-tray-outline" size={44} color="#a8a29e" />
+              <Text style={styles.emptyOrdersTitle}>No Orders Yet</Text>
+              <Text style={styles.emptyOrdersSubtitle}>
+                Customer orders will appear here when they book your services
               </Text>
-            </Pressable>
+            </View>
           ) : (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.manageScrollContent}
+              contentContainerStyle={styles.ordersScrollContent}
             >
-              {manageableEvents.map((item) => {
-                const imageUri = item.image_url || item.banner_url || "";
-                const isImageLoading = imageLoadingStates[item.id] || false;
-                return (
-                  <Pressable
-                    key={item.id}
-                    style={styles.manageCard}
-                    onPress={() => router.push(`/event/manage/${item.id}`)}
-                  >
-                    <View style={styles.imageContainer}>
-                      {imageUri ? (
-                        <>
-                          <Image
-                            source={{ uri: imageUri }}
-                            style={styles.manageCardImage}
-                            onLoadStart={() => handleImageLoadStart(item.id)}
-                            onLoadEnd={() => handleImageLoadEnd(item.id)}
-                            onError={() => handleImageLoadError(item.id)}
-                          />
-                          {isImageLoading && (
-                            <View style={styles.imageLoadingOverlay}>
-                              <ActivityIndicator color="#800000" size="large" />
-                            </View>
-                          )}
-                        </>
-                      ) : (
-                        <Image
-                          source={placeholderImage}
-                          style={styles.manageCardImage}
-                        />
-                      )}
-                    </View>
-                    <View style={styles.manageCardContent}>
-                      <Text style={styles.manageCardTitle}>{item.event}</Text>
-                      {item.description ? (
-                        <Text style={styles.manageCardDescription} numberOfLines={2}>
-                          {item.description}
-                        </Text>
-                      ) : (
-                        <Text style={styles.manageCardDescriptionMuted}>No description yet</Text>
-                      )}
-                      <View style={styles.manageCardFooter}>
-                        <View style={[styles.manageStatusBadge,
-                        item.status === 'upcoming' && styles.statusUpcoming,
-                        item.status === 'ongoing' && styles.statusOngoing
-                        ]}>
-                          <Text style={[styles.manageStatusText,
-                          item.status === 'upcoming' && styles.statusUpcomingText,
-                          item.status === 'ongoing' && styles.statusOngoingText
-                          ]}>{item.status}</Text>
-                        </View>
-                        <Text style={styles.managePaymentText}>₹{item.payment?.toFixed(2) ?? "0.00"}</Text>
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
+              {orders.slice(0, 5).map((order) => (
+                <OrderPreviewCard key={order.id} order={order} />
+              ))}
 
-              <Pressable
-                style={[styles.manageCard, styles.manageAddMoreCard]}
-                onPress={() => router.push("/event/manage/create")}
-              >
-                <View style={styles.manageAddIconWrapper}>
-                  <Ionicons name="add-circle-outline" size={48} color="#800000" />
-                </View>
-                <Text style={styles.manageAddMoreText}>Add Event</Text>
-              </Pressable>
+              {orders.length > 5 && (
+                <Pressable
+                  style={styles.viewAllOrdersCard}
+                  onPress={() => router.push('/orders/allOrders' as any)}
+                >
+                  <Ionicons name="arrow-forward-circle-outline" size={40} color="#800000" />
+                  <Text style={styles.viewAllOrdersText}>View All</Text>
+                  <Text style={styles.viewAllOrdersCount}>+{orders.length - 5} more</Text>
+                </Pressable>
+              )}
             </ScrollView>
           )}
         </View>
 
-        {/* Events Section */}
-        <View style={styles.eventsSection}>
-          <View style={styles.eventsSectionHeader}>
-            <Text style={styles.sectionTitle}>Events</Text>
-            <Pressable
-              style={styles.viewAllButton}
-              onPress={() => router.push("/event")}
-            >
-              <Text style={styles.viewAllText}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color="#800000" />
-            </Pressable>
-          </View>
+        {/* SECTION 2: ANALYTICAL DATA */}
+        <View style={styles.analyticsSection}>
+          <Text style={styles.sectionTitle}>Analytics & Performance</Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.eventsScrollContent}
-          >
-            {/* Upcoming Events Card */}
-            <Pressable
-              style={styles.eventCard}
-              onPress={() => router.push("/event/upcomingEvents")}
-            >
-              <View style={[styles.eventIconContainer, { backgroundColor: '#80000015' }]}>
-                <Ionicons name="calendar-outline" size={28} color="#800000" />
+          <View style={styles.analyticsRow}>
+            <View style={styles.analyticsCard}>
+              <View style={styles.analyticsIconContainer}>
+                <Ionicons name="wallet-outline" size={28} color="#34C759" />
               </View>
-              <Text style={styles.eventCardTitle}>Upcoming</Text>
-              <Text style={styles.eventCardCount}>
-                {allEvents.filter((e: any) => e.status === 'upcoming').length}
-              </Text>
-              <Text style={styles.eventCardDescription}>
-                Events scheduled ahead
-              </Text>
-            </Pressable>
-
-            {/* Ongoing Events Card */}
-            <Pressable
-              style={styles.eventCard}
-              onPress={() => router.push("/event/currentEvents")}
-            >
-              <View style={[styles.eventIconContainer, { backgroundColor: '#FF950015' }]}>
-                <Ionicons name="time-outline" size={28} color="#FF9500" />
-              </View>
-              <Text style={styles.eventCardTitle}>Ongoing</Text>
-              <Text style={styles.eventCardCount}>
-                {allEvents.filter((e: any) => e.status === 'ongoing').length}
-              </Text>
-              <Text style={styles.eventCardDescription}>
-                Currently in progress
-              </Text>
-            </Pressable>
-
-            {/* Completed Events Card */}
-            <Pressable
-              style={styles.eventCard}
-              onPress={() => router.push("/profilePages/profileSettings/history_and_highlights/pastEvents")}
-            >
-              <View style={[styles.eventIconContainer, { backgroundColor: '#34C75915' }]}>
-                <Ionicons name="checkmark-circle-outline" size={28} color="#34C759" />
-              </View>
-              <Text style={styles.eventCardTitle}>Completed</Text>
-              <Text style={styles.eventCardCount}>
-                {allEvents.filter((e: any) => e.status === 'completed').length}
-              </Text>
-              <Text style={styles.eventCardDescription}>
-                Successfully delivered
-              </Text>
-            </Pressable>
-
-            {/* All Events Card */}
-            <Pressable
-              style={styles.eventCard}
-              onPress={() => router.push("/event")}
-            >
-              <View style={[styles.eventIconContainer, { backgroundColor: '#a8a29e15' }]}>
-                <Ionicons name="grid-outline" size={28} color="#57534e" />
-              </View>
-              <Text style={styles.eventCardTitle}>All Events</Text>
-              <Text style={styles.eventCardCount}>
-                {allEvents.length}
-              </Text>
-              <Text style={styles.eventCardDescription}>
-                Complete history
-              </Text>
-            </Pressable>
-          </ScrollView>
-        </View>
-
-        {/* Requests Section */}
-        <View style={styles.requestsSection}>
-          <Text style={styles.sectionTitle}>Activity</Text>
-          <Pressable
-            style={styles.requestsCard}
-            onPress={() => router.push("/requests/menu")}
-          >
-            <View style={styles.requestsContent}>
-              <View style={styles.requestsIconWrapper}>
-                <Ionicons name="document-text-outline" size={22} color="#800000" />
-              </View>
-              <View style={styles.requestsText}>
-                <Text style={styles.requestsTitle}>Pending Requests</Text>
-                {!isHydrated ? (
-                  <ActivityIndicator size="small" color="#800000" />
-                ) : (
-                  <Text style={styles.requestsCount}>{requestsCount ?? 0} new</Text>
-                )}
-              </View>
+              <Text style={styles.analyticsLabel}>Total Earnings</Text>
+              <Text style={styles.analyticsValue}>₹{analytics.totalEarnings.toFixed(2)}</Text>
+              <Text style={styles.analyticsSubtext}>All time</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#a8a29e" />
-          </Pressable>
 
-          {/* Event Inquiries Card */}
-          <Pressable
-            style={styles.requestsCard}
-            onPress={() => router.push("/requests/inquiries")}
-          >
-            <View style={styles.requestsContent}>
-              <View style={styles.requestsIconWrapper}>
-                <Ionicons name="mail-outline" size={22} color="#800000" />
-                {pendingInquiries > 0 && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {pendingInquiries > 99 ? '99+' : pendingInquiries}
-                    </Text>
-                  </View>
-                )}
+            <View style={styles.analyticsCard}>
+              <View style={[styles.analyticsIconContainer, { backgroundColor: 'rgba(128, 0, 0, 0.08)' }]}>
+                <Ionicons name="trending-up-outline" size={28} color="#800000" />
               </View>
-              <View style={styles.requestsText}>
-                <Text style={styles.requestsTitle}>Event Inquiries</Text>
-                <Text style={styles.requestsCount}>
-                  {pendingInquiries} pending
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#a8a29e" />
-          </Pressable>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Quick Stats</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>
-                {allEvents.filter((e: any) => e.status === 'upcoming' || e.status === 'ongoing').length}
-              </Text>
-              <Text style={styles.statLabel}>Active</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>
-                {allEvents.filter((e: any) => {
-                  const eventDate = new Date(e.start_date);
-                  const currentDate = new Date();
-                  return eventDate.getMonth() === currentDate.getMonth() &&
-                    eventDate.getFullYear() === currentDate.getFullYear();
-                }).length}
-              </Text>
-              <Text style={styles.statLabel}>This Month</Text>
+              <Text style={styles.analyticsLabel}>This Month</Text>
+              <Text style={styles.analyticsValue}>₹{analytics.thisMonthEarnings.toFixed(2)}</Text>
+              <Text style={styles.analyticsSubtext}>{analytics.thisMonthEventsCount} events</Text>
             </View>
           </View>
+
+          <View style={styles.analyticsRow}>
+            <View style={styles.analyticsCard}>
+              <View style={[styles.analyticsIconContainer, { backgroundColor: 'rgba(0, 122, 255, 0.08)' }]}>
+                <Ionicons name="calendar-outline" size={28} color="#007AFF" />
+              </View>
+              <Text style={styles.analyticsLabel}>Past Events</Text>
+              <Text style={styles.analyticsValue}>{analytics.pastEventsCount}</Text>
+              <Text style={styles.analyticsSubtext}>Completed</Text>
+            </View>
+
+            <View style={styles.analyticsCard}>
+              <View style={[styles.analyticsIconContainer, { backgroundColor: 'rgba(255, 193, 60, 0.08)' }]}>
+                <Ionicons name="star" size={28} color="#FFC13C" />
+              </View>
+              <Text style={styles.analyticsLabel}>Rating</Text>
+              <Text style={styles.analyticsValue}>{analytics.avgRating.toFixed(1)} ⭐</Text>
+              <Text style={styles.analyticsSubtext}>{analytics.totalReviews} reviews</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 3: CREATE EVENT CTA */}
+        <View style={styles.createEventSection}>
+          <Pressable
+            style={styles.createEventCTA}
+            onPress={() => router.push('/event/manage/create')}
+          >
+            <View style={styles.createEventIconCircle}>
+              <Ionicons name="add-circle" size={56} color="#800000" />
+            </View>
+            <View style={styles.createEventTextContainer}>
+              <Text style={styles.createEventTitle}>Create New Event</Text>
+              <Text style={styles.createEventSubtitle}>
+                Set up a new event to showcase to customers
+              </Text>
+            </View>
+            <View style={styles.createEventArrow}>
+              <Ionicons name="arrow-forward" size={24} color="#800000" />
+            </View>
+          </Pressable>
+
+          {/* Recently Managed Events Preview */}
+          {manageableEvents.length > 0 && (
+            <>
+              <View style={styles.manageEventsHeader}>
+                <Text style={styles.subsectionTitle}>Your Events</Text>
+                <Pressable onPress={() => router.push('/event')}>
+                  <Text style={styles.viewAllLink}>View All</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.manageEventsScroll}
+              >
+                {manageableEvents.slice(0, 3).map((item) => {
+                  const imageUri = item.image_url || item.banner_url || "";
+                  return (
+                    <Pressable
+                      key={item.id}
+                      style={styles.manageCardSmall}
+                      onPress={() => router.push(`/event/manage/${item.id}`)}
+                    >
+                      <Image
+                        source={imageUri ? { uri: imageUri } : placeholderImage}
+                        style={styles.manageCardImageSmall}
+                      />
+                      <Text style={styles.manageCardTitleSmall} numberOfLines={1}>{item.event}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
         </View>
 
         {/* Reviews Section */}
@@ -505,6 +449,7 @@ const Home = () => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -590,282 +535,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingBottom: 50,
   },
-  // Calendar Section - FOCAL POINT with premium treatment
-  calendarSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    marginBottom: 56,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.06)',
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 32,
-    elevation: 12,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-    paddingTop: 28,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 0, 0, 0.04)',
-  },
-  calendarTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1c1917',
-    letterSpacing: -0.3,
-  },
-  calendarLink: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#800000',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  calendarWrapper: {
-    paddingHorizontal: 28,
-    paddingBottom: 24,
-    paddingTop: 8,
-  },
-  eventsSection: {
+  // Order Section Styles
+  ordersSection: {
     marginBottom: 56,
     marginLeft: -28,
     marginRight: -28,
     overflow: 'visible',
   },
-  manageSection: {
-    marginBottom: 56,
-    marginLeft: -28,
-    marginRight: -28,
-    overflow: 'visible',
-  },
-  manageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingLeft: 28,
-    paddingRight: 28,
-    minHeight: 48,
-  },
-  createButton: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    backgroundColor: '#800000',
-    borderRadius: 32,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  emptyManageCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 24,
-    padding: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.08)',
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-    marginHorizontal: 28,
-  },
-  emptyManageTitle: {
-    marginTop: 20,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1c1917',
-    letterSpacing: -0.3,
-  },
-  emptyManageSubtitle: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#57534e',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '400',
-  },
-  manageScrollContent: {
-    paddingLeft: 28,
-    paddingRight: 28,
-    paddingVertical: 10,
-  },
-  manageCard: {
-    width: 300,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: 24,
-    marginRight: 18,
-    marginVertical: 10,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.06)',
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  imageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 160,
-    backgroundColor: '#faf8f5',
-  },
-  imageLoadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 252, 250, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  manageCardImage: {
-    width: '100%',
-    height: 160,
-    resizeMode: 'cover',
-  },
-  manageCardContent: {
-    padding: 24,
     gap: 12,
+    marginBottom: 20,
+    paddingHorizontal: 28,
   },
-  manageCardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1c1917',
-    letterSpacing: -0.3,
-    lineHeight: 24,
+  orderCountBadge: {
+    backgroundColor: 'rgba(128, 0, 0, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  manageCardDescription: {
-    fontSize: 14,
-    color: '#57534e',
-    lineHeight: 22,
-    fontWeight: '400',
-  },
-  manageCardDescriptionMuted: {
-    fontSize: 14,
-    color: '#a8a29e',
-    fontStyle: 'italic',
-    fontWeight: '400',
-  },
-  manageCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 0, 0, 0.06)',
-  },
-  manageStatusBadge: {
-    backgroundColor: '#f5f5f4',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  manageStatusText: {
-    fontSize: 10,
-    textTransform: 'uppercase',
-    color: '#57534e',
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  statusUpcoming: {
-    backgroundColor: '#007AFF10',
-  },
-  statusUpcomingText: {
-    color: '#007AFF',
-  },
-  statusOngoing: {
-    backgroundColor: '#FF950010',
-  },
-  statusOngoingText: {
-    color: '#FF9500',
-  },
-  managePaymentText: {
-    fontSize: 18,
-    fontWeight: '700',
+  orderCountText: {
     color: '#800000',
-    letterSpacing: -0.3,
-  },
-  manageAddMoreCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-    backgroundColor: 'rgba(128, 0, 0, 0.02)',
-  },
-  manageAddIconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  manageAddMoreText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#800000',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  eventsSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingLeft: 28,
-    paddingRight: 28,
-    minHeight: 48,
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(128, 0, 0, 0.06)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.08)',
-  },
-  viewAllText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#800000',
-    marginRight: 4,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
   },
-  eventsScrollContent: {
-    paddingLeft: 28,
-    paddingRight: 28,
-    paddingVertical: 10,
-  },
-  eventCard: {
-    width: 180,
+  emptyOrdersCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderRadius: 24,
-    padding: 26,
+    padding: 40,
+    alignItems: 'center',
+    marginHorizontal: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(128, 0, 0, 0.06)',
+  },
+  emptyOrdersTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1c1917',
+    marginTop: 16,
+  },
+  emptyOrdersSubtitle: {
+    fontSize: 14,
+    color: '#57534e',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  ordersScrollContent: {
+    paddingLeft: 28,
+    paddingRight: 28,
+    paddingVertical: 4,
+  },
+  orderPreviewCard: {
+    width: 280,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 24,
+    padding: 20,
     marginRight: 16,
-    marginVertical: 10,
     borderWidth: 1,
     borderColor: 'rgba(128, 0, 0, 0.06)',
     shadowColor: '#800000',
@@ -874,37 +601,213 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
   },
-  eventIconContainer: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
+  orderCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  orderIdText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#a8a29e',
+    letterSpacing: 0.5,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  orderTitleText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1c1917',
+    marginBottom: 6,
+  },
+  orderCustomerText: {
+    fontSize: 14,
+    color: '#57534e',
+    marginBottom: 16,
+  },
+  orderCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 0, 0, 0.04)',
+  },
+  orderDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  orderDateText: {
+    fontSize: 13,
+    color: '#57534e',
+    fontWeight: '500',
+  },
+  orderAmountText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#800000',
+  },
+  viewAllOrdersCard: {
+    width: 160,
+    backgroundColor: 'rgba(128, 0, 0, 0.03)',
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(128, 0, 0, 0.2)',
+  },
+  viewAllOrdersText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1c1917',
+  },
+  viewAllOrdersCount: {
+    fontSize: 12,
+    color: '#800000',
+    fontWeight: '600',
+  },
+
+  // Analytics Styles
+  analyticsSection: {
+    marginBottom: 56,
+  },
+  analyticsRow: {
+    flexDirection: 'row',
+    gap: 18,
     marginBottom: 18,
   },
-  eventCardTitle: {
-    fontSize: 15,
+  analyticsCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(128, 0, 0, 0.06)',
+    shadowColor: '#800000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  analyticsIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(52, 199, 89, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  analyticsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#57534e',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  analyticsValue: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#1c1917',
-    marginBottom: 10,
-    letterSpacing: -0.2,
+    marginBottom: 4,
+    letterSpacing: -0.5,
   },
-  eventCardCount: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#800000',
-    marginBottom: 12,
-    letterSpacing: -1.2,
+  analyticsSubtext: {
+    fontSize: 12,
+    color: '#a8a29e',
+    fontWeight: '500',
   },
-  eventCardDescription: {
-    fontSize: 13,
-    color: '#57534e',
-    lineHeight: 19,
-    fontWeight: '400',
-  },
-  requestsSection: {
+
+  // Create Event Styles
+  createEventSection: {
     marginBottom: 56,
   },
+  createEventCTA: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 28,
+    padding: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(128, 0, 0, 0.1)',
+    shadowColor: '#800000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
+    marginBottom: 24,
+  },
+  createEventIconCircle: {
+    marginRight: 18,
+  },
+  createEventTextContainer: {
+    flex: 1,
+  },
+  createEventTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#1c1917',
+    marginBottom: 4,
+  },
+  createEventSubtitle: {
+    fontSize: 14,
+    color: '#57534e',
+    lineHeight: 20,
+  },
+  createEventArrow: {
+    marginLeft: 10,
+  },
+  manageEventsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1c1917',
+  },
+  viewAllLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#800000',
+  },
+  manageEventsScroll: {
+    paddingVertical: 8,
+  },
+  manageCardSmall: {
+    width: 140,
+    marginRight: 16,
+  },
+  manageCardImageSmall: {
+    width: 140,
+    height: 90,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  manageCardTitleSmall: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1c1917',
+  },
+
+  // Shared / Legacy
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -912,107 +815,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     letterSpacing: -0.4,
   },
-  requestsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: 22,
-    padding: 26,
+  viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.06)',
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
+    gap: 4,
   },
-  requestsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  requestsIconWrapper: {
-    position: 'relative',
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(128, 0, 0, 0.08)',
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF3B30',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    borderWidth: 2,
-    borderColor: '#faf8f5',
-  },
-  notificationBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  requestsText: {
-    marginLeft: 18,
-    flex: 1,
-  },
-  requestsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1c1917',
-    marginBottom: 6,
-    letterSpacing: -0.2,
-  },
-  requestsCount: {
+  viewAllText: {
     fontSize: 14,
-    color: '#57534e',
-    fontWeight: '500',
-  },
-  statsSection: {
-    marginBottom: 56,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 18,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(128, 0, 0, 0.06)',
-    shadowColor: '#800000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  statNumber: {
-    fontSize: 36,
     fontWeight: '700',
     color: '#800000',
-    marginBottom: 10,
-    letterSpacing: -1.5,
   },
-  statLabel: {
-    fontSize: 13,
-    color: '#57534e',
-    textAlign: 'center',
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
+
   // Reviews Section Styles
   reviewsSection: {
     marginBottom: 56,

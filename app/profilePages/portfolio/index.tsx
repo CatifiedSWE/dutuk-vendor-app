@@ -1,9 +1,9 @@
-import logger from '@/utils/logger';
 import { PortfolioItem, usePortfolio } from '@/hooks/usePortfolio';
-import { toast, Toasts } from '@backpackapp-io/react-native-toast';
+import logger from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
+import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
 import { router } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     ActionSheetIOS,
     ActivityIndicator,
@@ -21,7 +21,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
@@ -76,7 +76,7 @@ const PortfolioPage = () => {
     // Show error toast when error state changes
     useEffect(() => {
         if (error) {
-            toast.error(error);
+            Toast.show({ type: 'error', text1: error });
         }
     }, [error]);
 
@@ -119,7 +119,7 @@ const PortfolioPage = () => {
             }
         } catch (error) {
             logger.error('Error toggling video playback:', error);
-            toast.error('Failed to play video');
+            Toast.show({ type: 'error', text1: 'Failed to play video' });
         }
     };
 
@@ -146,16 +146,16 @@ const PortfolioPage = () => {
                     if (buttonIndex === 1) {
                         const result = await pickAndUploadImage();
                         if (result) {
-                            toast.success('Photo added to portfolio!');
+                            Toast.show({ type: 'success', text1: 'Photo added to portfolio!' });
                         } else if (error) {
-                            toast.error(error);
+                            Toast.show({ type: 'error', text1: error });
                         }
                     } else if (buttonIndex === 2) {
                         const result = await pickAndUploadVideo();
                         if (result) {
-                            toast.success('Video added to portfolio!');
+                            Toast.show({ type: 'success', text1: 'Video added to portfolio!' });
                         } else if (error) {
-                            toast.error(error);
+                            Toast.show({ type: 'error', text1: error });
                         }
                     }
                 }
@@ -172,9 +172,9 @@ const PortfolioPage = () => {
                         onPress: async () => {
                             const result = await pickAndUploadImage();
                             if (result) {
-                                toast.success('Photo added to portfolio!');
+                                Toast.show({ type: 'success', text1: 'Photo added to portfolio!' });
                             } else if (error) {
-                                toast.error(error);
+                                Toast.show({ type: 'error', text1: error });
                             }
                         },
                     },
@@ -183,9 +183,9 @@ const PortfolioPage = () => {
                         onPress: async () => {
                             const result = await pickAndUploadVideo();
                             if (result) {
-                                toast.success('Video added to portfolio!');
+                                Toast.show({ type: 'success', text1: 'Video added to portfolio!' });
                             } else if (error) {
-                                toast.error(error);
+                                Toast.show({ type: 'error', text1: error });
                             }
                         },
                     },
@@ -206,10 +206,10 @@ const PortfolioPage = () => {
         setSaving(false);
 
         if (success) {
-            toast.success('Details saved!');
+            Toast.show({ type: 'success', text1: 'Details saved!' });
             setShowDetailModal(false);
         } else {
-            toast.error('Failed to save details');
+            Toast.show({ type: 'error', text1: 'Failed to save details' });
         }
     };
 
@@ -218,7 +218,7 @@ const PortfolioPage = () => {
 
         const success = await toggleFeatured(selectedItem.id);
         if (success) {
-            toast.success(selectedItem.is_featured ? 'Removed from featured' : 'Added to featured');
+            Toast.show({ type: 'success', text1: selectedItem.is_featured ? 'Removed from featured' : 'Added to featured' });
             setSelectedItem({ ...selectedItem, is_featured: !selectedItem.is_featured });
         }
     };
@@ -238,10 +238,10 @@ const PortfolioPage = () => {
                     onPress: async () => {
                         const success = await deleteItem(selectedItem.id);
                         if (success) {
-                            toast.success(`${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} deleted`);
+                            Toast.show({ type: 'success', text1: `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} deleted` });
                             handleModalClose();
                         } else {
-                            toast.error(`Failed to delete ${mediaType}`);
+                            Toast.show({ type: 'error', text1: `Failed to delete ${mediaType}` });
                         }
                     },
                 },
@@ -257,7 +257,6 @@ const PortfolioPage = () => {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <Toasts />
 
             {/* Header */}
             <View style={styles.header}>
@@ -327,7 +326,7 @@ const PortfolioPage = () => {
                             >
                                 {isVideoUrl(item.image_url) ? (
                                     <View style={styles.videoContainer}>
-                                                                                <Video
+                                        <Video
                                             source={{ uri: item.image_url }}
                                             style={styles.gridImage}
                                             resizeMode={ResizeMode.COVER}
@@ -395,10 +394,10 @@ const PortfolioPage = () => {
                                             setVideoLoading(false);
                                         }}
                                     />
-                                    
+
                                     {/* Video Overlay Controls */}
                                     {!videoError && (
-                                        <Pressable 
+                                        <Pressable
                                             style={styles.videoOverlay}
                                             onPress={toggleVideoPlayback}
                                         >
@@ -419,7 +418,7 @@ const PortfolioPage = () => {
                                             )}
                                         </Pressable>
                                     )}
-                                    
+
                                     {/* Error State */}
                                     {videoError && (
                                         <View style={styles.videoErrorContainer}>

@@ -1,14 +1,14 @@
 import logger from '@/utils/logger';
 // BACKEND INTEGRATION ENABLED - USING SUPABASE FOR DATABASE SYNC
+import UnifiedCalendar from "@/components/UnifiedCalendar";
 import getStoredDates, { StoredDate } from "@/hooks/getStoredDates";
 import { DateStatus, removeDate, storeDateWithStatus } from "@/hooks/useStoreDates";
+import { buildAvailabilityMarkedDates } from "@/utils/calendarAvailability";
 import { Ionicons } from '@expo/vector-icons';
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from 'react-native-toast-message';
-import UnifiedCalendar from "@/components/UnifiedCalendar";
-import { buildAvailabilityMarkedDates } from "@/utils/calendarAvailability";
 
 // Helper function to check if a date is in the past
 const isPastDate = (dateString: string): boolean => {
@@ -18,7 +18,7 @@ const isPastDate = (dateString: string): boolean => {
   return checkDate < today;
 };
 
-const CalendarPage = () => {
+const CalendarPage = ({ hideBackButton = false }: { hideBackButton?: boolean }) => {
   const [isAllowed, setAllowed] = useState(false);
   const [calendarDates, setCalendarDates] = useState<StoredDate[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -199,13 +199,15 @@ const CalendarPage = () => {
     return (
       <View style={style.container}>
         {/* Back Button */}
-        <Pressable
-          style={style.backButton}
-          onPress={() => router.back()}
-          data-testid="calendar-back-button"
-        >
-          <Ionicons name="arrow-back" size={24} color="#000000ff" />
-        </Pressable>
+        {!hideBackButton && (
+          <Pressable
+            style={style.backButton}
+            onPress={() => router.back()}
+            data-testid="calendar-back-button"
+          >
+            <Ionicons name="arrow-back" size={24} color="#000000ff" />
+          </Pressable>
+        )}
 
         <View style={style.headerContainer}>
           <Text style={style.headerTitle}>Manage Availability</Text>
@@ -264,7 +266,7 @@ const style = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: '#faf8f5',
-    paddingVertical: 20,
+    paddingVertical: 10,
   },
   backButton: {
     position: 'absolute',

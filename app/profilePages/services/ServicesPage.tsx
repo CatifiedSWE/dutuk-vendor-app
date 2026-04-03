@@ -1,5 +1,4 @@
 import { CreateServiceParams, Service, useServices } from '@/hooks/useServices';
-import { toast, Toasts } from '@backpackapp-io/react-native-toast';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -16,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 const PRICE_TYPES = [
     { value: 'fixed', label: 'Fixed Price' },
@@ -70,7 +70,7 @@ const ServicesPage = () => {
 
     const handleSave = async () => {
         if (!formName.trim()) {
-            toast.error('Please enter a service name');
+            Toast.show({ type: 'error', text1: 'Please enter a service name' });
             return;
         }
 
@@ -88,20 +88,20 @@ const ServicesPage = () => {
             if (editingService) {
                 const success = await updateService(editingService.id, params);
                 if (success) {
-                    toast.success('Service updated!');
+                    Toast.show({ type: 'success', text1: 'Service updated!' });
                     setShowAddModal(false);
                     resetForm();
                 } else {
-                    toast.error('Failed to update service');
+                    Toast.show({ type: 'error', text1: 'Failed to update service' });
                 }
             } else {
                 const result = await createService(params);
                 if (result) {
-                    toast.success('Service created!');
+                    Toast.show({ type: 'success', text1: 'Service created!' });
                     setShowAddModal(false);
                     resetForm();
                 } else {
-                    toast.error('Failed to create service');
+                    Toast.show({ type: 'error', text1: 'Failed to create service' });
                 }
             }
         } finally {
@@ -121,9 +121,9 @@ const ServicesPage = () => {
                     onPress: async () => {
                         const success = await deleteService(service.id);
                         if (success) {
-                            toast.success('Service deleted');
+                            Toast.show({ type: 'success', text1: 'Service deleted' });
                         } else {
-                            toast.error('Failed to delete service');
+                            Toast.show({ type: 'error', text1: 'Failed to delete service' });
                         }
                     },
                 },
@@ -134,7 +134,7 @@ const ServicesPage = () => {
     const handleToggleActive = async (service: Service) => {
         const success = await toggleServiceActive(service.id);
         if (success) {
-            toast.success(service.is_active ? 'Service hidden' : 'Service visible');
+            Toast.show({ type: 'success', text1: service.is_active ? 'Service hidden' : 'Service visible' });
         }
     };
 
@@ -161,7 +161,6 @@ const ServicesPage = () => {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <Toasts />
 
             {/* Header */}
             <View style={styles.header}>
