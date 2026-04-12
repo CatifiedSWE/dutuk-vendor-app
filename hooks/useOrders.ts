@@ -205,44 +205,9 @@ export const useOrders = () => {
         return false;
       }
 
-      // If approved, create a conversation linked to this order (non-blocking)
-      if (status === 'approved') {
-        try {
-          const { data: existingConv } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('order_id', orderId)
-            .maybeSingle();
-
-          if (!existingConv) {
-            const { error: convError } = await supabase
-              .from('conversations')
-              .insert({
-                customer_id: orderData.customer_id,
-                vendor_id: user.id,
-                order_id: orderId,
-                booking_status: 'accepted',
-                terms_accepted_by_customer: false,
-              });
-
-            if (convError) {
-              logger.error('Failed to create conversation (non-blocking):', convError.message, convError.code);
-            }
-          } else {
-            const { error: updateConvError } = await supabase
-              .from('conversations')
-              .update({ booking_status: 'accepted' })
-              .eq('id', existingConv.id);
-
-            if (updateConvError) {
-              logger.error('Failed to update conversation (non-blocking):', updateConvError.message);
-            }
-          }
-        } catch (convException) {
-          // Conversation failure must NOT block the order approval
-          logger.error('Conversation create exception (non-blocking):', convException);
-        }
-      }
+      // NOTE: Conversation creation is handled by the DB trigger `handle_order_approval`
+      // which fires AFTER the order update and uses ON CONFLICT (order_id) DO UPDATE
+      // No app-side conversation management needed here.
 
       // Update local state
       setOrders(prevOrders =>
