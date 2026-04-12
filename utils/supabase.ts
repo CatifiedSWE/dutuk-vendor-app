@@ -1,7 +1,7 @@
 import logger from '@/utils/logger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
-import { storage } from './storage';
 
 // Load Supabase credentials from environment variables
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -17,45 +17,47 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Check if we're in a server-side rendering context
 const isServerSide = typeof window === 'undefined';
 
-// Safe storage that works in all environments including SSR
-const createSafeStorage = () => ({
-  getItem: async (key: string): Promise<string | null> => {
-    if (typeof window === 'undefined') return null;
-    try {
-      if (Platform.OS === 'web') {
-        return window.localStorage?.getItem(key) ?? null;
+// Auth storage adapter
+// ─────────────────────────────────────────────────────────────────────────────
+// We deliberately use AsyncStorage here (NOT MMKV) for two reasons:
+// 1. Supabase auth only stores ~3 small tokens — async perf is irrelevant.
+// 2. react-native-mmkv v4 returns a C++ HybridObject whose native methods
+//    are not accessible via CommonJS require() or conditional access inside
+//    function closures, causing "storage.delete is not a function" crashes.
+// Zustand state (larger, sync-required) continues to use MMKV separately.
+const createSafeStorage = () => {
+  if (Platform.OS === 'web') {
+    return {
+      getItem: async (key: string) => window.localStorage?.getItem(key) ?? null,
+      setItem: async (key: string, value: string) => window.localStorage?.setItem(key, value),
+      removeItem: async (key: string) => window.localStorage?.removeItem(key),
+    };
+  }
+  return {
+    getItem: async (key: string): Promise<string | null> => {
+      try {
+        return await AsyncStorage.getItem(key);
+      } catch (error) {
+        logger.warn('Storage getItem error:', error);
+        return null;
       }
-      return storage.getString(key) ?? null;
-    } catch (error) {
-      logger.warn('Storage getItem error:', error);
-      return null;
-    }
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    if (typeof window === 'undefined') return;
-    try {
-      if (Platform.OS === 'web') {
-        window.localStorage?.setItem(key, value);
-        return;
+    },
+    setItem: async (key: string, value: string): Promise<void> => {
+      try {
+        await AsyncStorage.setItem(key, value);
+      } catch (error) {
+        logger.warn('Storage setItem error:', error);
       }
-      storage.set(key, value);
-    } catch (error) {
-      logger.warn('Storage setItem error:', error);
-    }
-  },
-  removeItem: async (key: string): Promise<void> => {
-    if (typeof window === 'undefined') return;
-    try {
-      if (Platform.OS === 'web') {
-        window.localStorage?.removeItem(key);
-        return;
+    },
+    removeItem: async (key: string): Promise<void> => {
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch (error) {
+        logger.warn('Storage removeItem error:', error);
       }
-      storage.delete(key);
-    } catch (error) {
-      logger.warn('Storage removeItem error:', error);
-    }
-  },
-});
+    },
+  };
+};
 
 // Custom fetch with timeout for storage operations
 const createCustomFetch = () => (url: RequestInfo | URL, options: RequestInit = {}) => {

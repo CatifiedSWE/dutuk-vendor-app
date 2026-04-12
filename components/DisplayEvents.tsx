@@ -1,3 +1,4 @@
+import PricingBadges from '@/components/PricingBadges';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type FlatEventProp = {
@@ -13,6 +14,10 @@ type FlatEventProp = {
     payment: number;
     status: string;
     created_at: string;
+    pricing_summary?: any[];
+    has_custom_pricing?: boolean;
+    total_min_budget?: number;
+    total_max_budget?: number;
 };
 
 type EventsProp = {
@@ -23,10 +28,10 @@ const DisplayEvents = ({ events }: EventsProp) => {
     const formatDate = (dateString: string) => {
         if (!dateString) return 'N/A';
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
     };
 
@@ -55,11 +60,12 @@ const DisplayEvents = ({ events }: EventsProp) => {
                             )}
                         </Text>
 
-                        {/* Payment */}
-                        <Text style={styles.detailText}>
-                            <Text style={styles.label}>Payment: </Text>
-                            ₹{event.payment?.toFixed(2) || '0.00'}
-                        </Text>
+                        {/* Pricing */}
+                        <Text style={styles.label}>Pricing: </Text>
+                        <PricingBadges
+                            pricingSummary={event.pricing_summary}
+                            fallbackPayment={event.payment}
+                        />
 
                         {/* Status */}
                         <Text style={styles.detailText}>

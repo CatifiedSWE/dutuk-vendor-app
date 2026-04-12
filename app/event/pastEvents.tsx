@@ -1,3 +1,4 @@
+import PricingBadges from "@/components/PricingBadges";
 import { useCompletedEvents, useVendorStore } from "@/store/useVendorStore";
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useState } from "react";
@@ -75,10 +76,11 @@ const PastEvents = () => {
       </View>
 
       <View style={styles.cardFooter}>
-        <View style={styles.paymentContainer}>
-          <Ionicons name="cash-outline" size={18} color="#800000" />
-          <Text style={styles.paymentText}>{formatCurrency(item.payment)}</Text>
-        </View>
+        <Ionicons name="cash-outline" size={18} color="#800000" style={{ marginBottom: 4 }} />
+        <PricingBadges
+          pricingSummary={(item as any).pricing_summary}
+          fallbackPayment={item.payment}
+        />
       </View>
     </View>
   );

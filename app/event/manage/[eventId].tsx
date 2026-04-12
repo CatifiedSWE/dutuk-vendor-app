@@ -1,9 +1,11 @@
 import KeyboardSafeView from "@/components/KeyboardSafeView";
+import PricingItemEditor from "@/components/PricingItemEditor";
 import deleteEvent from "@/hooks/deleteEvent";
 import updateEvent, { UpdateEventPayload } from "@/hooks/updateEvent";
+import { getEventPricing } from "@/hooks/useEventPricing";
 import useImageUpload from "@/hooks/useImageUpload";
 import { useVendorStore } from "@/store/useVendorStore";
-import logger from '@/utils/logger';
+import { createEmptyPricingItem, PricingItem } from "@/types/pricing";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -11,20 +13,22 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
+import { Calendar } from "react-native-calendars";
 import Toast from "react-native-toast-message";
 
-const STATUSES = ["upcoming", "ongoing", "completed", "cancelled"] as const;
+// NOTE: 'completed' intentionally excluded — events can only complete via customer confirmation
+const STATUSES = ["upcoming", "ongoing", "cancelled"] as const;
 
 type ManageFormState = {
   event: string;
   description: string;
-  payment: string;
   status: (typeof STATUSES)[number];
   startDate: string;
   endDate: string;
@@ -43,40 +47,39 @@ const ManageEventScreen = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectingImage, setSelectingImage] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [eventImageUrl, setEventImageUrl] = useState<string | null>(null);
   const [formState, setFormState] = useState<ManageFormState>({
     event: "",
     description: "",
-    payment: "0",
     status: "upcoming",
     startDate: "",
     endDate: "",
   });
   const [initialFormState, setInitialFormState] = useState<ManageFormState | null>(null);
   const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([createEmptyPricingItem(0)]);
+  const [initialPricingItems, setInitialPricingItems] = useState<PricingItem[]>([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
 
-  const { pickImage, uploadImage, deleteImage } = useImageUpload();
+  // Calendar Modal State
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMode, setCalendarMode] = useState<'start' | 'end'>('start');
 
-  // Check if there are unsaved changes
+  const { pickAndUploadImage } = useImageUpload();
+
   const hasUnsavedChanges = useMemo(() => {
     if (!initialFormState) return false;
-
     const formChanged =
       formState.event !== initialFormState.event ||
       formState.description !== initialFormState.description ||
-      formState.payment !== initialFormState.payment ||
       formState.status !== initialFormState.status ||
       formState.startDate !== initialFormState.startDate ||
       formState.endDate !== initialFormState.endDate;
-
     const imageChanged = eventImageUrl !== initialImageUrl;
+    const pricingChanged = JSON.stringify(pricingItems) !== JSON.stringify(initialPricingItems);
+    return formChanged || imageChanged || pricingChanged;
+  }, [formState, eventImageUrl, initialFormState, initialImageUrl, pricingItems, initialPricingItems]);
 
-    return formChanged || imageChanged;
-  }, [formState, eventImageUrl, initialFormState, initialImageUrl]);
-
-  // Load event from store
   useEffect(() => {
     if (eventId && allEvents.length > 0) {
       const data = allEvents.find((e) => e.id === eventId);
@@ -84,730 +87,265 @@ const ManageEventScreen = () => {
         const loadedFormState = {
           event: data.event || "",
           description: data.description || "",
-          payment: data.payment ? String(data.payment) : "0",
           status: (STATUSES.includes(data.status) ? data.status : "upcoming") as ManageFormState["status"],
           startDate: data.start_date || "",
           endDate: data.end_date || "",
         };
         setFormState(loadedFormState);
         setInitialFormState(loadedFormState);
-
         if (data.image_url) {
           setEventImageUrl(data.image_url);
           setInitialImageUrl(data.image_url);
         }
-      } else if (!eventsLoading) {
-        Toast.show({
-          type: "error",
-          text1: "Event not found",
-          text2: "The event you are looking for does not exist.",
-        });
-        router.back();
+
+        setPricingLoading(true);
+        getEventPricing(eventId)
+          .then((items) => {
+            if (items.length > 0) {
+              setPricingItems(items);
+              setInitialPricingItems(items);
+            } else if (data.payment && data.payment > 0) {
+              const seed: PricingItem = { ...createEmptyPricingItem(0), label: 'Service', pricing_type: 'fixed', price: data.payment };
+              setPricingItems([seed]);
+              setInitialPricingItems([]);
+            }
+          })
+          .finally(() => setPricingLoading(false));
       }
     }
-  }, [eventId, allEvents, eventsLoading]);
+  }, [eventId, allEvents]);
 
-  const handleEventImageSelect = async () => {
+  const handleImagePicker = async () => {
     try {
       setSelectingImage(true);
-
-      const imageUri = await pickImage({
-        bucket: "event-images",
-        folder: "events",
-        maxWidth: 1920,
-        maxHeight: 1080,
-        quality: 0.8,
-      });
-
-      if (imageUri) {
-        setSelectedImageUri(imageUri);
-        Toast.show({
-          type: 'success',
-          text1: 'Image Selected',
-          text2: 'Now click "Upload Image" to save it.'
-        });
-      }
-    } catch (error: any) {
-      logger.error("Failed to select event image:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Selection Failed',
-        text2: error?.message || 'Failed to select image. Please try again.'
-      });
+      const imageUrl = await pickAndUploadImage({ bucket: "event-images", folder: "events" });
+      if (imageUrl) setEventImageUrl(imageUrl);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Upload Failed' });
     } finally {
       setSelectingImage(false);
     }
   };
 
-  const handleEventImageUpload = async () => {
-    if (!selectedImageUri) {
-      Toast.show({
-        type: 'error',
-        text1: 'No Image Selected',
-        text2: 'Please select an image first.'
-      });
-      return;
-    }
-
-    try {
-      setUploadingImage(true);
-
-      Toast.show({
-        type: 'info',
-        text1: 'Uploading...',
-        text2: 'Uploading image to server...'
-      });
-
-      // Store old image URL before uploading new one
-      const oldImageUrl = eventImageUrl;
-
-      const imageUrl = await uploadImage(selectedImageUri, {
-        bucket: "event-images",
-        folder: "events",
-      });
-
-      if (imageUrl) {
-        // Delete old image from storage if it exists
-        if (oldImageUrl) {
-          logger.log("Deleting old image:", oldImageUrl);
-          const deleted = await deleteImage(oldImageUrl);
-          if (deleted) {
-            logger.log("Old image deleted successfully");
-          } else {
-            logger.log("Could not delete old image (non-critical)");
-          }
-        }
-
-        setEventImageUrl(imageUrl);
-        setSelectedImageUri(null);
-
-        // Also update in database immediately
-        if (eventId) {
-          await updateEvent(eventId, { image_url: imageUrl });
-        }
-
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Event image updated successfully!'
-        });
-      }
-    } catch (error: any) {
-      logger.error("Failed to upload event image:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Upload Failed',
-        text2: error?.message || 'Failed to upload event image. Please try again.'
-      });
-    } finally {
-      setUploadingImage(false);
-    }
+  const openCalendar = (mode: 'start' | 'end') => {
+    setCalendarMode(mode);
+    setShowCalendar(true);
   };
 
-  const handleRemoveImage = async () => {
-    if (!eventImageUrl || !eventId) return;
-
-    Alert.alert(
-      "Remove Image",
-      "Are you sure you want to remove this image? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Delete from storage
-              logger.log("Removing image from storage:", eventImageUrl);
-              await deleteImage(eventImageUrl);
-
-              // Update database to remove image URL
-              await updateEvent(eventId, { image_url: null });
-
-              setEventImageUrl(null);
-              Toast.show({
-                type: 'success',
-                text1: 'Image Removed',
-                text2: 'Event image has been removed.'
-              });
-            } catch (error) {
-              logger.error("Error removing image:", error);
-              Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Failed to remove image.'
-              });
-            }
-          },
-        },
-      ]
-    );
+  const onDateSelect = (day: { dateString: string }) => {
+    if (calendarMode === 'start') setFormState(p => ({ ...p, startDate: day.dateString }));
+    else setFormState(p => ({ ...p, endDate: day.dateString }));
+    setShowCalendar(false);
   };
 
   const handleSave = async () => {
-    if (!eventId) {
-      return;
-    }
-
-    if (!formState.event.trim()) {
-      Toast.show({
-        type: "error",
-        text1: "Missing title",
-        text2: "Event title is required.",
-      });
-      return;
-    }
-
+    if (!eventId || !formState.event.trim()) return;
     setSaving(true);
     try {
       const updates: UpdateEventPayload = {
         event: formState.event.trim(),
         description: formState.description.trim() || null,
         status: formState.status,
-        payment: Number.parseFloat(formState.payment) || 0,
+        pricingItems,
+        image_url: eventImageUrl,
+        date: formState.startDate ? [formState.startDate, formState.endDate].filter(Boolean) as string[] : undefined
       };
-
-      if (formState.startDate) {
-        const dateRange = [formState.startDate];
-        if (formState.endDate) {
-          dateRange.push(formState.endDate);
-        }
-        updates.date = dateRange;
-      }
-
-      // Include image URL if present
-      if (eventImageUrl) {
-        updates.image_url = eventImageUrl;
-      }
-
       await updateEvent(eventId, updates);
-
-      Toast.show({
-        type: "success",
-        text1: "Event updated",
-        text2: "Your event details have been saved.",
-      });
-
-      // Navigate back to home after successful save
-      router.push("/(tabs)/home");
+      Toast.show({ type: "success", text1: "Event Updated" });
+      router.back();
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Update failed",
-        text2: "Unable to save event changes.",
-      });
+      Toast.show({ type: "error", text1: "Update Failed" });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = () => {
-    if (!eventId) {
-      return;
-    }
-
-    Alert.alert(
-      "Delete Event",
-      `Are you sure you want to delete "${formState.event || "this event"}"? This action cannot be undone and all event data will be permanently removed.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              // Delete image from storage first if it exists
-              if (eventImageUrl) {
-                logger.log("Deleting event image from storage:", eventImageUrl);
-                const deleted = await deleteImage(eventImageUrl);
-                if (deleted) {
-                  logger.log("Event image deleted from storage");
-                } else {
-                  logger.log("Could not delete image from storage (will proceed with event deletion)");
-                }
-              }
-
-              // Delete the event from database
-              await deleteEvent(eventId);
-
-              Toast.show({
-                type: "success",
-                text1: "Event deleted",
-                text2: "The event and its image have been removed successfully.",
-              });
-              router.push("/(tabs)/home");
-            } catch (error) {
-              logger.error("Error deleting event:", error);
-              Toast.show({
-                type: "error",
-                text1: "Delete failed",
-                text2: "Unable to delete event. Please try again.",
-              });
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    if (!eventId) return;
+    Alert.alert("Delete Event", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteEvent(eventId);
+            Toast.show({ type: "success", text1: "Event Deleted" });
+            router.push("/(tabs)/home");
+          } catch (error) {
+            Toast.show({ type: "error", text1: "Delete Failed" });
+          } finally { setDeleting(false); }
+        }
+      }
+    ]);
   };
 
-  const handleBackNavigation = () => {
-    if (hasUnsavedChanges) {
-      Alert.alert(
-        "Unsaved Changes",
-        "You have unsaved changes. Are you sure you want to leave? Your changes will be discarded.",
-        [
-          {
-            text: "Stay",
-            style: "cancel",
-          },
-          {
-            text: "Discard",
-            style: "destructive",
-            onPress: () => {
-              router.back();
-            },
-          },
-        ],
-        { cancelable: true }
-      );
-    } else {
-      router.back();
-    }
-  };
-
-  if (eventsLoading && !initialFormState) {
+  if (pricingLoading || (eventsLoading && !initialFormState)) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading event...</Text>
-      </View>
+      <View style={styles.center}><ActivityIndicator color="#800000" size="large" /></View>
     );
   }
 
   return (
-    <KeyboardSafeView
-      scrollable={true}
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Event Details</Text>
+    <KeyboardSafeView scrollable style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.headerArea}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}><Ionicons name="chevron-back" size={24} color="#800000" /></Pressable>
+        <View>
+          <Text style={styles.pageTitle}>Manage Event</Text>
+          <Text style={styles.pageSubtitle}>{formState.event || "Edit Details"}</Text>
+        </View>
+      </View>
 
-        {/* Event Image Section */}
-        <Text style={styles.label}>Event Image</Text>
-        {eventImageUrl ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: eventImageUrl }}
-              style={styles.imagePreview}
-            />
-            <View style={styles.imageActionsRow}>
-              <Pressable
-                style={styles.removeImageButton}
-                onPress={handleRemoveImage}
-                disabled={selectingImage || uploadingImage || saving || deleting}
-              >
-                <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                <Text style={styles.removeImageText}>Remove</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : selectedImageUri ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: selectedImageUri }}
-              style={styles.imagePreview}
-            />
-            <View style={styles.imageActionsRow}>
-              <Pressable
-                style={[styles.uploadImageButton, uploadingImage && { opacity: 0.6 }]}
-                onPress={handleEventImageUpload}
-                disabled={uploadingImage || saving || deleting}
-              >
-                {uploadingImage ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
-                    <Text style={styles.uploadImageButtonText}>Upload Image</Text>
-                  </>
-                )}
-              </Pressable>
-              <Pressable
-                style={styles.changeSelectionButton}
-                onPress={handleEventImageSelect}
-                disabled={uploadingImage || saving || deleting}
-              >
-                <Text style={styles.changeSelectionText}>Change Selection</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <Pressable
-            style={styles.uploadButton}
-            onPress={handleEventImageSelect}
-            disabled={selectingImage || saving || deleting}
-          >
-            {selectingImage ? (
-              <View style={styles.uploadingContainer}>
-                <ActivityIndicator color="#007AFF" size="large" />
-                <Text style={styles.uploadingText}>Selecting...</Text>
-              </View>
-            ) : (
-              <>
-                <Ionicons name="image-outline" size={40} color="#007AFF" />
-                <Text style={styles.uploadButtonText}>Add Event Image</Text>
-                <Text style={styles.uploadButtonSubtext}>Tap to choose from gallery</Text>
-              </>
-            )}
+      <View style={styles.mainContainer}>
+        {/* Cover Image */}
+        <View style={styles.imageCard}>
+          {eventImageUrl ? (
+            <Image source={{ uri: eventImageUrl }} style={styles.coverImage} />
+          ) : (
+            <View style={styles.placeholderBox}><Ionicons name="image-outline" size={40} color="#CCC" /></View>
+          )}
+          <Pressable style={styles.editImageBtn} onPress={handleImagePicker}>
+            <Ionicons name="camera" size={18} color="#FFF" />
+            <Text style={styles.editImageText}>Change Cover</Text>
           </Pressable>
-        )}
+        </View>
 
-        <Text style={styles.label}>Event Title</Text>
-        <TextInput
-          style={styles.input}
-          value={formState.event}
-          onChangeText={(text) => setFormState((prev) => ({ ...prev, event: text }))}
-          placeholder="Enter event title"
-        />
+        {/* Basic Info */}
+        <View style={styles.card}>
+          <Text style={styles.fieldLabel}>EVENT TITLE</Text>
+          <TextInput
+            style={styles.titleInput}
+            value={formState.event}
+            onChangeText={(t) => setFormState(p => ({ ...p, event: t }))}
+            placeholder="Event Name"
+          />
 
-        <Text style={styles.label}>Description</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 24 }]}>STATUS</Text>
+          <View style={styles.statusRow}>
+            {STATUSES.map(s => (
+              <Pressable
+                key={s}
+                style={[styles.statusChip, formState.status === s && styles.statusActive]}
+                onPress={() => setFormState(p => ({ ...p, status: s }))}
+              >
+                <Text style={[styles.statusText, formState.status === s && styles.statusTextActive]}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Timeline */}
+        <Text style={[styles.fieldLabel, { marginTop: 32, marginLeft: 2 }]}>TIMELINE</Text>
+        <View style={styles.card}>
+          <View style={styles.dateRow}>
+            <Pressable style={styles.dateBtn} onPress={() => openCalendar('start')}>
+              <Ionicons name="calendar-outline" size={16} color="#800000" />
+              <Text style={[styles.dateText, !formState.startDate && styles.dateEmpty]}>{formState.startDate || "Start Date"}</Text>
+            </Pressable>
+            <Ionicons name="arrow-forward" size={14} color="#CCC" />
+            <Pressable style={styles.dateBtn} onPress={() => openCalendar('end')}>
+              <Ionicons name="calendar-outline" size={16} color="#800000" />
+              <Text style={[styles.dateText, !formState.endDate && styles.dateEmpty]}>{formState.endDate || "End Date"}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Pricing */}
+        <Text style={[styles.fieldLabel, { marginTop: 32, marginLeft: 2 }]}>PRICING ITEMS</Text>
+        {pricingItems.map((item, index) => (
+          <PricingItemEditor
+            key={item.id || item.tempId || String(index)}
+            item={item}
+            onUpdate={(u) => setPricingItems(p => { const n = [...p]; n[index] = u; return n; })}
+            onDelete={() => setPricingItems(p => p.filter((_, i) => i !== index))}
+            isOnlyItem={pricingItems.length === 1}
+          />
+        ))}
+        <Pressable style={styles.addItemBtn} onPress={() => setPricingItems(p => [...p, createEmptyPricingItem(p.length)])}>
+          <Ionicons name="add-circle" size={20} color="#800000" />
+          <Text style={styles.addItemText}>Add Another Item</Text>
+        </Pressable>
+
+        {/* Description */}
+        <Text style={[styles.fieldLabel, { marginTop: 32, marginLeft: 2 }]}>DESCRIPTION</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
+          style={styles.multiline}
           multiline
           numberOfLines={4}
           value={formState.description}
-          onChangeText={(text) => setFormState((prev) => ({ ...prev, description: text }))}
-          placeholder="Describe the event"
+          onChangeText={(t) => setFormState(p => ({ ...p, description: t }))}
+          placeholder="Event description..."
         />
 
-        <Text style={styles.label}>Payment (₹)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="decimal-pad"
-          value={formState.payment}
-          onChangeText={(text) => setFormState((prev) => ({ ...prev, payment: text }))}
-          placeholder="0.00"
-        />
+        <View style={{ height: 40 }} />
 
-        <Text style={styles.label}>Status</Text>
-        <View style={styles.statusRow}>
-          {STATUSES.map((status) => {
-            const active = status === formState.status;
-            return (
-              <Pressable
-                key={status}
-                style={[styles.statusChip, active && styles.statusChipActive]}
-                onPress={() => setFormState((prev) => ({ ...prev, status }))}
-              >
-                <Text style={[styles.statusChipText, active && styles.statusChipTextActive]}>
-                  {status}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* Actions */}
+        <Pressable style={[styles.saveBtn, !hasUnsavedChanges && styles.saveDisabled]} onPress={handleSave} disabled={saving || !hasUnsavedChanges}>
+          {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
+        </Pressable>
 
-        <Text style={styles.label}>Start Date (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          value={formState.startDate}
-          onChangeText={(text) => setFormState((prev) => ({ ...prev, startDate: text }))}
-          placeholder="2025-01-01"
-        />
-
-        <Text style={styles.label}>End Date (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          value={formState.endDate}
-          onChangeText={(text) => setFormState((prev) => ({ ...prev, endDate: text }))}
-          placeholder="2025-01-02"
-        />
+        <Pressable style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
+          <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+          <Text style={styles.deleteText}>Delete Event</Text>
+        </Pressable>
       </View>
 
-      <Pressable style={[styles.saveButton, saving && styles.saveButtonDisabled]} onPress={handleSave} disabled={saving || deleting}>
-        {saving ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <>
-            <Ionicons name="save-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </>
-        )}
-      </Pressable>
-
-      <Pressable
-        style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
-        onPress={handleDelete}
-        disabled={saving || deleting}
-      >
-        {deleting ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <>
-            <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.deleteButtonText}>Delete Event</Text>
-          </>
-        )}
-      </Pressable>
-
-      <Pressable style={styles.backButton} onPress={handleBackNavigation} disabled={saving || deleting}>
-        <Ionicons name="arrow-back" size={18} color="#007AFF" />
-        <Text style={styles.backButtonText}>Back</Text>
-      </Pressable>
+      <Modal visible={showCalendar} transparent animationType="slide">
+        <Pressable style={styles.overlay} onPress={() => setShowCalendar(false)}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select {calendarMode === 'start' ? 'Start' : 'End'} Date</Text>
+              <Pressable onPress={() => setShowCalendar(false)}><Ionicons name="close" size={24} color="#800000" /></Pressable>
+            </View>
+            <Calendar
+              onDayPress={onDateSelect}
+              markedDates={{ [calendarMode === 'start' ? formState.startDate : formState.endDate]: { selected: true, selectedColor: '#800000' } }}
+              theme={{ selectedDayBackgroundColor: '#800000', todayTextColor: '#800000', arrowColor: '#800000' }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardSafeView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-    marginTop: 14,
-    color: "#333333",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#DDDDDD",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
-    fontSize: 14,
-  },
-  multiline: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  statusRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 8,
-  },
-  statusChip: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#C7C7CC",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  statusChipActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  statusChipText: {
-    fontSize: 13,
-    color: "#3A3A3C",
-    textTransform: "capitalize",
-  },
-  statusChipTextActive: {
-    color: "#FFFFFF",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#007AFF",
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginBottom: 16,
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#FF3B30",
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginBottom: 16,
-  },
-  deleteButtonDisabled: {
-    opacity: 0.7,
-  },
-  deleteButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  backButtonText: {
-    color: "#007AFF",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#666666",
-  },
-  imagePreviewContainer: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-    backgroundColor: '#F0F0F0',
-  },
-  changeImageButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    padding: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  changeImageText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  removeImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-    backgroundColor: '#FFF',
-  },
-  removeImageText: {
-    color: '#FF3B30',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8F9FF',
-    marginBottom: 16,
-  },
-  uploadButtonText: {
-    marginTop: 12,
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  uploadButtonSubtext: {
-    marginTop: 4,
-    color: '#666666',
-    fontSize: 13,
-  },
-  uploadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  uploadingText: {
-    marginTop: 12,
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  imageActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-  },
-  uploadImageButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-  },
-  uploadImageButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  changeSelectionButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#FFF',
-  },
-  changeSelectionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  container: { flex: 1, backgroundColor: "#faf8f5" },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { paddingBottom: 60 },
+  headerArea: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 24, gap: 16 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', elevation: 2 },
+  pageTitle: { fontSize: 22, fontWeight: '900', color: '#1c1917' },
+  pageSubtitle: { fontSize: 12, fontWeight: '700', color: '#800000', opacity: 0.6 },
+  mainContainer: { padding: 24 },
+  imageCard: { width: '100%', height: 200, borderRadius: 24, overflow: 'hidden', marginBottom: 24, position: 'relative' },
+  coverImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  placeholderBox: { width: '100%', height: '100%', backgroundColor: '#E5E5E5', alignItems: 'center', justifyContent: 'center' },
+  editImageBtn: { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16 },
+  editImageText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 24, elevation: 4, shadowColor: '#800000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
+  fieldLabel: { fontSize: 10, fontWeight: '900', color: '#800000', letterSpacing: 1.5, marginBottom: 12 },
+  titleInput: { fontSize: 16, fontWeight: '700', color: '#1c1917', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingVertical: 8 },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statusChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#EEE' },
+  statusActive: { backgroundColor: '#800000', borderColor: '#800000' },
+  statusText: { fontSize: 12, fontWeight: '700', color: '#666', textTransform: 'capitalize' },
+  statusTextActive: { color: '#FFF' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dateBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FAF8F5', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+  dateText: { fontSize: 13, fontWeight: '700', color: '#1c1917' },
+  dateEmpty: { color: '#BBB', fontWeight: '500' },
+  addItemBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, backgroundColor: '#80000008', borderRadius: 18, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(128,0,0,0.2)' },
+  addItemText: { fontSize: 14, fontWeight: '700', color: '#800000' },
+  multiline: { backgroundColor: '#FFF', borderRadius: 20, padding: 16, minHeight: 120, fontSize: 15, elevation: 2, textAlignVertical: 'top' },
+  saveBtn: { backgroundColor: '#800000', paddingVertical: 20, borderRadius: 24, alignItems: 'center', shadowColor: '#800000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  saveDisabled: { opacity: 0.5 },
+  saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  deleteBtn: { marginTop: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 },
+  deleteText: { color: '#FF3B30', fontWeight: '700', fontSize: 15 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#800000' },
 });
 
 export default ManageEventScreen;
-

@@ -217,3 +217,95 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 --     '0 0 * * *',
 --     'SELECT public.update_event_status();'
 -- );
+
+-- =====================================================
+-- MULTI-PRICING: sync_event_pricing_summary trigger
+-- Fires after INSERT/UPDATE/DELETE on event_pricing_items.
+-- Atomically updates:
+--   events.pricing_summary      — full JSONB array for fast reads
+--   events.total_min_budget     — sum of fixed prices + range minimums
+--   events.total_max_budget     — sum of fixed prices + range maximums
+--   events.has_custom_pricing   — true if any item is 'custom'
+--   events.payment              — backward-compat (equals total_min_budget)
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.sync_event_pricing_summary()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_event_id UUID;
+    v_items JSONB;
+    v_total_min DECIMAL(12, 2);
+    v_total_max DECIMAL(12, 2);
+    v_has_custom BOOLEAN;
+BEGIN
+    -- Determine the affected event_id
+    IF (TG_OP = 'DELETE') THEN
+        v_event_id := OLD.event_id;
+    ELSE
+        v_event_id := NEW.event_id;
+    END IF;
+
+    -- Aggregate all pricing items for this event
+    SELECT
+        COALESCE(
+            jsonb_agg(
+                jsonb_build_object(
+                    'id',          epi.id,
+                    'label',       epi.label,
+                    'pricing_type', epi.pricing_type,
+                    'price',       epi.price,
+                    'price_min',   epi.price_min,
+                    'price_max',   epi.price_max,
+                    'price_unit',  epi.price_unit,
+                    'custom_note', epi.custom_note,
+                    'sort_order',  epi.sort_order
+                ) ORDER BY epi.sort_order ASC
+            ),
+            '[]'::jsonb
+        ),
+        COALESCE(
+            SUM(
+                CASE epi.pricing_type
+                    WHEN 'fixed' THEN COALESCE(epi.price, 0)
+                    WHEN 'range' THEN COALESCE(epi.price_min, 0)
+                    ELSE 0
+                END
+            ),
+            0
+        ),
+        COALESCE(
+            SUM(
+                CASE epi.pricing_type
+                    WHEN 'fixed' THEN COALESCE(epi.price, 0)
+                    WHEN 'range' THEN COALESCE(epi.price_max, COALESCE(epi.price_min, 0))
+                    ELSE 0
+                END
+            ),
+            0
+        ),
+        BOOL_OR(epi.pricing_type = 'custom') IS TRUE
+    INTO v_items, v_total_min, v_total_max, v_has_custom
+    FROM public.event_pricing_items epi
+    WHERE epi.event_id = v_event_id;
+
+    -- Update the denormalized columns on the events table
+    UPDATE public.events SET
+        pricing_summary    = v_items,
+        total_min_budget   = v_total_min,
+        total_max_budget   = v_total_max,
+        has_custom_pricing = COALESCE(v_has_custom, false),
+        payment            = v_total_min   -- backward-compat
+    WHERE id = v_event_id;
+
+    RETURN NULL; -- AFTER trigger; return value is ignored
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger on event_pricing_items
+DROP TRIGGER IF EXISTS trg_sync_event_pricing_summary ON public.event_pricing_items;
+
+CREATE TRIGGER trg_sync_event_pricing_summary
+    AFTER INSERT OR UPDATE OR DELETE
+    ON public.event_pricing_items
+    FOR EACH ROW
+    EXECUTE FUNCTION public.sync_event_pricing_summary();

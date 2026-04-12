@@ -2,7 +2,7 @@ import { PortfolioItem, usePortfolio } from '@/hooks/usePortfolio';
 import logger from '@/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
     ActionSheetIOS,
@@ -79,6 +79,15 @@ const PortfolioPage = () => {
             Toast.show({ type: 'error', text1: error });
         }
     }, [error]);
+
+    const params = useLocalSearchParams();
+    useEffect(() => {
+        if (params.action === 'upload') {
+            handleAddMedia();
+            // Clear the param to prevent re-triggering
+            router.setParams({ action: undefined });
+        }
+    }, [params.action]);
 
     const openDetailModal = (item: PortfolioItem) => {
         setSelectedItem(item);

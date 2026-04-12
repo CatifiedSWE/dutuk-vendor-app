@@ -77,7 +77,7 @@ export const usePortfolio = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [userId, setUserId] = useState<string | null>(null);
+    const [vendorId, setVendorId] = useState<string | null>(null);
 
     const fetchPortfolio = useCallback(async () => {
         try {
@@ -92,7 +92,8 @@ export const usePortfolio = () => {
                 return;
             }
 
-            setUserId(user.id);
+            // Align with auth.users.id (auth.uid()) as used in the database
+            setVendorId(user.id);
 
             const { data, error: fetchError } = await supabase
                 .from('portfolio_items')
@@ -171,11 +172,11 @@ export const usePortfolio = () => {
                 .from('portfolio')
                 .getPublicUrl(uploadData.path);
 
-            // Create portfolio item
+            // Create portfolio item using auth user's ID
             const { data, error: insertError } = await supabase
                 .from('portfolio_items')
                 .insert({
-                    vendor_id: user.id,
+                    vendor_id: user.id, // Correct: Use auth user ID (auth.uid())
                     image_url: publicUrl,
                     title: params?.title || null,
                     description: params?.description || null,
@@ -210,28 +211,22 @@ export const usePortfolio = () => {
                 return null;
             }
 
-            // Pick video with compression settings
+            // Pick video
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
-                allowsEditing: false, // Disable editing to get full video info
-                quality: 0.5, // Lower quality for smaller file size
-                videoMaxDuration: 300, // Allow up to 5 minutes for selection, we'll validate later
-                videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality, // Compress video
+                allowsEditing: false,
+                quality: 0.5,
+                videoMaxDuration: 300,
+                videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
             });
 
             if (result.canceled) return null;
 
             const asset = result.assets[0];
 
-            // Check video duration (in milliseconds)
+            // Check video duration
             if (asset.duration && asset.duration > 60000) {
                 setError(`Video is too long (${Math.round(asset.duration / 1000)}s). Please select a video under 60 seconds.`);
-                return null;
-            }
-
-            // Check file size (max 50MB after compression)
-            if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
-                setError('Video file is too large. Please select a shorter or lower quality video.');
                 return null;
             }
 
@@ -239,7 +234,7 @@ export const usePortfolio = () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Read video file with better memory management
+            // Read video file
             let arrayBuffer: ArrayBuffer;
             try {
                 const response = await fetch(asset.uri);
@@ -255,7 +250,7 @@ export const usePortfolio = () => {
             const fileExt = asset.uri.split('.').pop()?.toLowerCase() || 'mp4';
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-            // Upload to Supabase Storage with progress tracking
+            // Upload
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('portfolio')
                 .upload(fileName, arrayBuffer, {
@@ -263,26 +258,18 @@ export const usePortfolio = () => {
                     upsert: false,
                 });
 
-            if (uploadError) {
-                // Handle specific upload errors
-                if (uploadError.message.includes('size')) {
-                    throw new Error('Video is too large to upload. Please select a shorter video.');
-                } else if (uploadError.message.includes('timeout')) {
-                    throw new Error('Upload timed out. Please check your internet connection and try again.');
-                }
-                throw uploadError;
-            }
+            if (uploadError) throw uploadError;
 
             // Get public URL
             const { data: { publicUrl } } = supabase.storage
                 .from('portfolio')
                 .getPublicUrl(uploadData.path);
 
-            // Create portfolio item
+            // Create portfolio item using auth user's ID
             const { data, error: insertError } = await supabase
                 .from('portfolio_items')
                 .insert({
-                    vendor_id: user.id,
+                    vendor_id: user.id, // Correct: Use auth user ID (auth.uid())
                     image_url: publicUrl,
                     title: params?.title || null,
                     description: params?.description || null,
@@ -297,25 +284,11 @@ export const usePortfolio = () => {
             if (insertError) throw insertError;
 
             setItems((prev) => [data, ...prev]);
-            setError(null); // Clear any previous errors
+            setError(null);
             return data;
         } catch (err: any) {
             logger.error('Error uploading video:', err);
-
-            // Provide user-friendly error messages
-            let errorMessage = 'Failed to upload video. Please try again.';
-
-            if (err.message.includes('Out of memory') || err.message.includes('allocation')) {
-                errorMessage = 'Video is too large. Please select a shorter video (under 60 seconds).';
-            } else if (err.message.includes('Network') || err.message.includes('network')) {
-                errorMessage = 'Network error. Please check your internet connection and try again.';
-            } else if (err.message.includes('timeout')) {
-                errorMessage = 'Upload timed out. Please try again with a stable internet connection.';
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-
-            setError(errorMessage);
+            setError(err.message);
             return null;
         } finally {
             setUploading(false);
@@ -359,7 +332,7 @@ export const usePortfolio = () => {
 
             if (deleteError) throw deleteError;
 
-            // Try to delete from storage (ignore errors)
+            // Try to delete from storage
             if (item?.image_url) {
                 try {
                     const path = item.image_url.split('/portfolio/').pop();
@@ -392,6 +365,7 @@ export const usePortfolio = () => {
         loading,
         error,
         uploading,
+        vendorId,
         refetch: fetchPortfolio,
         pickAndUploadImage,
         pickAndUploadVideo,

@@ -36,6 +36,7 @@ export interface Conversation {
     id: string;
     customer_id: string;
     vendor_id: string;
+    event_id: string | null;
     terms_accepted_by_customer: boolean;
     terms_accepted_at: string | null;
     payment_completed: boolean;
@@ -119,6 +120,7 @@ interface VendorState {
     incrementNewOrderCount: () => void;
     resetNewOrderCount: () => void;
     updateOrderInStore: (orderId: string, updates: Partial<Order>) => void;
+    updateEventInStore: (eventId: string, updates: Partial<any>) => void;
 }
 
 // =====================================================
@@ -299,7 +301,7 @@ export const useVendorStore = create<VendorState>()(
                     .from('events')
                     .select('*')
                     .eq('vendor_id', userId)
-                    .order('start_date', { ascending: true });
+                    .order('created_at', { ascending: false });
 
                 if (error) {
                     logger.error('Error fetching events:', error);
@@ -449,6 +451,10 @@ export const useVendorStore = create<VendorState>()(
 
             updateOrderInStore: (orderId, updates) => set((s) => ({
                 orders: s.orders.map((o: Order) => o.id === orderId ? { ...o, ...updates } : o),
+            })),
+
+            updateEventInStore: (eventId, updates) => set((s) => ({
+                allEvents: s.allEvents.map((e: any) => e.id === eventId ? { ...e, ...updates } : e),
             })),
         }),
         {

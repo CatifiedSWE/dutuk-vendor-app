@@ -2,9 +2,11 @@ import { getFileIcon, isImageType, useAttachments } from '@/hooks/chat/useAttach
 import { useConversation } from '@/hooks/chat/useConversations';
 import { Message, useMarkAsRead, useMessages, useSendMessage } from '@/hooks/chat/useMessages';
 import { useTypingIndicator } from '@/hooks/chat/useTypingIndicator';
+import { useRequestCompletion } from '@/hooks/useCompletion';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useVendorStore } from '@/store/useVendorStore';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActionSheetIOS,
     ActivityIndicator,
@@ -19,7 +21,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { AlertCircle, ArrowLeft, CheckCircle, Paperclip, Send, X } from 'react-native-feather';
+import { AlertCircle, ArrowLeft, CheckCircle, Clock, Paperclip, Send, X } from 'react-native-feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -29,14 +31,23 @@ export default function ConversationScreen() {
         customerName: string;
         customerId: string;
         paymentCompleted: string;
+        eventId?: string;
     }>();
 
-    const { conversationId, customerName, customerId, paymentCompleted: paymentCompletedParam } = params;
+    const { conversationId, customerName, customerId, paymentCompleted: paymentCompletedParam, eventId } = params;
     const paymentCompleted = paymentCompletedParam === 'true';
 
     const [message, setMessage] = useState('');
+    const [requestingCompletion, setRequestingCompletion] = useState(false);
     const currentUserId = useAuthStore((state) => state.userId);
     const flatListRef = useRef<FlatList>(null);
+
+    // Get event from store to check completion state
+    const allEvents = useVendorStore((s) => s.allEvents);
+    const linkedEvent = useMemo(
+        () => (eventId ? allEvents.find((e: any) => e.id === eventId) ?? null : null),
+        [eventId, allEvents]
+    );
 
     // Hooks
     const { messages, loading: messagesLoading, error: messagesError } = useMessages(
@@ -47,6 +58,7 @@ export default function ConversationScreen() {
     const { sendMessage, loading: sending } = useSendMessage();
     const { markAsRead } = useMarkAsRead();
     const { otherPartyTyping, onTextChange } = useTypingIndicator(conversationId || null, true);
+    const { requestCompletion } = useRequestCompletion();
     const {
         attachment,
         uploading,
@@ -58,6 +70,17 @@ export default function ConversationScreen() {
     } = useAttachments();
 
 
+    // Show button if event exists, is active, and no completion request yet
+    const canRequestCompletion = useMemo(() => {
+        if (!linkedEvent || !eventId) return false;
+        const activeStatuses = ['upcoming', 'ongoing'];
+        return activeStatuses.includes(linkedEvent.status) && !linkedEvent.completion_requested_at;
+    }, [linkedEvent, eventId]);
+
+    const completionAlreadyRequested = useMemo(
+        () => linkedEvent?.status === 'completion_requested',
+        [linkedEvent]
+    );
     // Mark messages as read when entering conversation
     useEffect(() => {
         if (conversationId) {
@@ -110,6 +133,30 @@ export default function ConversationScreen() {
             );
         }
     };
+
+    const handleRequestCompletion = useCallback(async () => {
+        if (!conversationId || !customerId || !eventId) return;
+        Alert.alert(
+            'Request Event Completion',
+            'This will notify the customer that you consider the event complete. They must confirm to finalise.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Send Request', style: 'default',
+                    onPress: async () => {
+                        setRequestingCompletion(true);
+                        const result = await requestCompletion({ conversationId, customerId, eventId });
+                        setRequestingCompletion(false);
+                        if (!result.success) {
+                            Toast.show({ type: 'error', text1: 'Failed to send completion request', text2: result.error, position: 'top' });
+                        } else {
+                            Toast.show({ type: 'success', text1: 'Completion request sent', position: 'top' });
+                        }
+                    }
+                },
+            ]
+        );
+    }, [conversationId, customerId, eventId, requestCompletion]);
 
     const handleSend = async () => {
         if ((!message.trim() && !attachment) || !conversationId || !customerId) return;
@@ -200,9 +247,43 @@ export default function ConversationScreen() {
         );
     };
 
-    const renderMessage = ({ item, index }: { item: Message; index: number }) => {
+    const renderCompletionRequestMessage = (item: Message, isOwn: boolean) => {
+        return (
+            <View style={[styles.completionCard, isOwn ? styles.completionCardOwn : styles.completionCardOther]}>
+                <View style={styles.completionCardHeader}>
+                    <Clock width={16} height={16} stroke={isOwn ? '#FFFFFF' : '#7C2A2A'} />
+                    <Text style={[styles.completionCardTitle, isOwn && styles.completionCardTitleOwn]}>
+                        Completion Request
+                    </Text>
+                </View>
+                <Text style={[styles.completionCardBody, isOwn && styles.completionCardBodyOwn]}>
+                    {isOwn
+                        ? 'You requested the customer confirm event completion.'
+                        : 'Vendor has requested you confirm event completion.'}
+                </Text>
+                {!isOwn && (
+                    <View style={styles.completionCardBadge}>
+                        <Text style={styles.completionCardBadgeText}>Awaiting customer confirmation</Text>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    const renderMessage = ({ item }: { item: Message; index: number }) => {
         const isOwn = item.sender_id === currentUserId;
-        const showTimestamp = true;
+
+        // Completion request messages get a dedicated card instead of a bubble
+        if (item.message_type === 'completion_request') {
+            return (
+                <View style={[styles.messageWrapper, isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper]}>
+                    {renderCompletionRequestMessage(item, isOwn)}
+                    <View style={styles.messageFooter}>
+                        <Text style={styles.messageTime}>{formatMessageTime(item.created_at)}</Text>
+                    </View>
+                </View>
+            );
+        }
 
         return (
             <View style={[styles.messageWrapper, isOwn ? styles.ownMessageWrapper : styles.otherMessageWrapper]}>
@@ -214,14 +295,12 @@ export default function ConversationScreen() {
                         </Text>
                     )}
                 </View>
-                {showTimestamp && (
-                    <View style={styles.messageFooter}>
-                        <Text style={styles.messageTime}>{formatMessageTime(item.created_at)}</Text>
-                        {isOwn && item.is_read && (
-                            <CheckCircle width={12} height={12} stroke="#22C55E" style={{ marginLeft: 4 }} />
-                        )}
-                    </View>
-                )}
+                <View style={styles.messageFooter}>
+                    <Text style={styles.messageTime}>{formatMessageTime(item.created_at)}</Text>
+                    {isOwn && item.is_read && (
+                        <CheckCircle width={12} height={12} stroke="#22C55E" style={{ marginLeft: 4 }} />
+                    )}
+                </View>
             </View>
         );
     };
@@ -284,6 +363,25 @@ export default function ConversationScreen() {
                         </View>
                     )}
                 </View>
+                {/* Request Completion Button */}
+                {(canRequestCompletion || completionAlreadyRequested) && (
+                    <Pressable
+                        style={[
+                            styles.completeBtn,
+                            completionAlreadyRequested && styles.completeBtnSent,
+                        ]}
+                        onPress={canRequestCompletion ? handleRequestCompletion : undefined}
+                        disabled={requestingCompletion || completionAlreadyRequested}
+                    >
+                        {requestingCompletion ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : completionAlreadyRequested ? (
+                            <Text style={styles.completeBtnText}>Awaiting Confirm</Text>
+                        ) : (
+                            <Text style={styles.completeBtnText}>Request Completion</Text>
+                        )}
+                    </Pressable>
+                )}
             </View>
 
             {/* Contact Info Warning */}
@@ -655,5 +753,72 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 8,
+    },
+    // ── Completion Request Button (header) ──────────────────
+    completeBtn: {
+        backgroundColor: '#7C2A2A',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        marginLeft: 8,
+    },
+    completeBtnSent: {
+        backgroundColor: '#B45309',
+    },
+    completeBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    // ── Completion Request Message Card ─────────────────────
+    completionCard: {
+        borderRadius: 12,
+        padding: 12,
+        maxWidth: '80%',
+        minWidth: 200,
+    },
+    completionCardOwn: {
+        backgroundColor: '#7C2A2A',
+    },
+    completionCardOther: {
+        backgroundColor: '#FFF1F0',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+    },
+    completionCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 6,
+    },
+    completionCardTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#7C2A2A',
+        marginLeft: 4,
+    },
+    completionCardTitleOwn: {
+        color: '#FFFFFF',
+    },
+    completionCardBody: {
+        fontSize: 12,
+        color: '#7C2A2A',
+        lineHeight: 18,
+    },
+    completionCardBodyOwn: {
+        color: '#FFE4E4',
+    },
+    completionCardBadge: {
+        marginTop: 8,
+        backgroundColor: '#FEE2E2',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        alignSelf: 'flex-start',
+    },
+    completionCardBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#991B1B',
     },
 });

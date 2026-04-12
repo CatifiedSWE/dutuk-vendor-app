@@ -1,96 +1,113 @@
 import KeyboardSafeView from "@/components/KeyboardSafeView";
+import PricingItemEditor from "@/components/PricingItemEditor";
 import createEvent from "@/hooks/createEvent";
 import { useVendorStore } from "@/store/useVendorStore";
+import { createEmptyPricingItem, PricingItem } from "@/types/pricing";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Modal,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from "react-native";
+import { Calendar } from "react-native-calendars";
 import Toast from "react-native-toast-message";
 
 const CreateEventStepTwo = () => {
     const params = useLocalSearchParams();
-    const eventTitle = params.eventTitle as string;
+    const eventTitle = params.eventTitle as string || "New Event";
     const eventImageUrl = params.eventImageUrl as string;
 
     const [saving, setSaving] = useState(false);
-    const [payment, setPayment] = useState("0");
+    const [pricingItems, setPricingItems] = useState<PricingItem[]>([
+        createEmptyPricingItem(0),
+    ]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [description, setDescription] = useState("");
 
-    const handleCreateEvent = async () => {
-        // Validate payment
-        const paymentAmount = Number.parseFloat(payment);
-        if (isNaN(paymentAmount) || paymentAmount < 0) {
-            Toast.show({
-                type: "error",
-                text1: "Invalid Payment",
-                text2: "Please enter a valid payment amount.",
-            });
-            return;
-        }
+    // Calendar Modal State
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [calendarMode, setCalendarMode] = useState<'start' | 'end'>('start');
 
-        // Validate start date if provided
-        if (startDate.trim()) {
-            const startDateObj = new Date(startDate.trim());
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+    const updatePricingItem = (index: number, updated: PricingItem) => {
+        setPricingItems((prev) => {
+            const next = [...prev];
+            next[index] = updated;
+            return next;
+        });
+    };
 
-            if (isNaN(startDateObj.getTime())) {
-                Toast.show({
-                    type: "error",
-                    text1: "Invalid Start Date",
-                    text2: "Please provide a valid date in YYYY-MM-DD format.",
-                });
-                return;
-            }
+    const deletePricingItem = (index: number) => {
+        setPricingItems((prev) => prev.filter((_, i) => i !== index));
+    };
 
-            if (startDateObj < today) {
-                Toast.show({
-                    type: "error",
-                    text1: "Invalid Start Date",
-                    text2: "Start date cannot be in the past.",
-                });
-                return;
-            }
+    const addPricingItem = () => {
+        setPricingItems((prev) => [...prev, createEmptyPricingItem(prev.length)]);
+    };
+
+    const openCalendar = (mode: 'start' | 'end') => {
+        setCalendarMode(mode);
+        setShowCalendar(true);
+    };
+
+    const onDateSelect = (day: { dateString: string }) => {
+        if (calendarMode === 'start') {
+            setStartDate(day.dateString);
         } else {
-            // Start date is required
-            Toast.show({
-                type: "error",
-                text1: "Start Date Required",
-                text2: "Please provide a start date for the event.",
-            });
+            setEndDate(day.dateString);
+        }
+        setShowCalendar(false);
+    };
+
+    const validatePricingItems = (): boolean => {
+        for (let i = 0; i < pricingItems.length; i++) {
+            const item = pricingItems[i];
+            const num = i + 1;
+
+            if (!item.label.trim()) {
+                Toast.show({ type: "error", text1: `Item ${num}: Label required`, text2: "Please enter a name for each pricing item." });
+                return false;
+            }
+            if (item.pricing_type === "fixed") {
+                if (!item.price || item.price <= 0) {
+                    Toast.show({ type: "error", text1: `Item ${num}: Invalid price`, text2: "Fixed price must be greater than ₹0." });
+                    return false;
+                }
+            }
+            if (item.pricing_type === "range") {
+                if (!item.price_min || item.price_min <= 0) {
+                    Toast.show({ type: "error", text1: `Item ${num}: Invalid minimum`, text2: "Minimum price must be greater than ₹0." });
+                    return false;
+                }
+                if (item.price_max !== undefined && item.price_max < item.price_min) {
+                    Toast.show({ type: "error", text1: `Item ${num}: Invalid range`, text2: "Maximum must be ≥ minimum price." });
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
+    const handleCreateEvent = async () => {
+        if (!validatePricingItems()) return;
+
+        if (!startDate.trim()) {
+            Toast.show({ type: "error", text1: "Start Date Required", text2: "Please provide a start date for the event." });
             return;
         }
 
-        // Validate end date if provided
         if (endDate.trim()) {
-            const endDateObj = new Date(endDate.trim());
-
-            if (isNaN(endDateObj.getTime())) {
-                Toast.show({
-                    type: "error",
-                    text1: "Invalid End Date",
-                    text2: "Please provide a valid date in YYYY-MM-DD format.",
-                });
-                return;
-            }
-
-            const startDateObj = new Date(startDate.trim());
-            if (endDateObj < startDateObj) {
-                Toast.show({
-                    type: "error",
-                    text1: "Invalid End Date",
-                    text2: "End date must be after the start date.",
-                });
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (end < start) {
+                Toast.show({ type: "error", text1: "Invalid End Date", text2: "End date must be after the start date." });
                 return;
             }
         }
@@ -100,40 +117,23 @@ const CreateEventStepTwo = () => {
             const newEvent = await createEvent({
                 event: eventTitle,
                 description: description.trim() || undefined,
-                payment: paymentAmount,
+                pricingItems,
                 status: "upcoming",
                 startDate: startDate.trim(),
                 endDate: endDate.trim() || undefined,
                 image_url: eventImageUrl,
             });
 
-            // Optimistic update
             useVendorStore.getState().addEvent(newEvent);
-
-            // Sync in background
             useVendorStore.getState().fetchEvents();
 
-            Toast.show({
-                type: "success",
-                text1: "Event Created",
-                text2: "Your event has been added successfully.",
-            });
-
-            // Redirect to home immediately
+            Toast.show({ type: "success", text1: "Event Created", text2: "Your event has been added successfully." });
             router.navigate('/(tabs)/home' as any);
         } catch (error) {
-            Toast.show({
-                type: "error",
-                text1: "Creation Failed",
-                text2: "Unable to create event. Please try again.",
-            });
+            Toast.show({ type: "error", text1: "Creation Failed", text2: "Unable to create event. Please try again." });
         } finally {
             setSaving(false);
         }
-    };
-
-    const handleBack = () => {
-        router.back();
     };
 
     return (
@@ -142,260 +142,258 @@ const CreateEventStepTwo = () => {
             style={styles.container}
             contentContainerStyle={styles.content}
         >
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-                <View style={styles.progressStep}>
-                    <View style={[styles.progressCircle, styles.progressCompleted]}>
-                        <Ionicons name="checkmark" size={20} color="#FFF" />
-                    </View>
-                    <Text style={[styles.progressLabel, styles.progressLabelCompleted]}>Basic Info</Text>
-                </View>
-                <View style={[styles.progressLine, styles.progressLineActive]} />
-                <View style={styles.progressStep}>
-                    <View style={[styles.progressCircle, styles.progressActive]}>
-                        <Text style={[styles.progressNumber, { color: '#FFF' }]}>2</Text>
-                    </View>
-                    <Text style={[styles.progressLabel, styles.progressLabelActive]}>Details</Text>
+            {/* Header Area */}
+            <View style={styles.headerArea}>
+                <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="chevron-back" size={24} color="#800000" />
+                </Pressable>
+                <View>
+                    <Text style={styles.pageTitle}>Event Details</Text>
+                    <Text style={styles.pageSubtitle}>{eventTitle}</Text>
                 </View>
             </View>
 
-            {/* Preview of Step 1 Data */}
-            <View style={styles.previewSection}>
-                <Text style={styles.previewTitle}>Event Preview</Text>
-                <Image
-                    source={{ uri: eventImageUrl }}
-                    style={styles.previewImage}
-                />
-                <Text style={styles.previewEventTitle}>{eventTitle}</Text>
+            {/* Banner Section */}
+            <View style={styles.bannerContainer}>
+                {eventImageUrl ? (
+                    <Image source={{ uri: eventImageUrl }} style={styles.bannerImage} />
+                ) : (
+                    <View style={[styles.bannerImage, styles.bannerPlaceholder]}>
+                        <Ionicons name="image-outline" size={40} color="rgba(128,0,0,0.2)" />
+                    </View>
+                )}
+                <View style={styles.bannerOverlay}>
+                    <View style={styles.stepBadge}>
+                        <Text style={styles.stepText}>STEP 2 / 2</Text>
+                    </View>
+                </View>
             </View>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Step 2: Event Details</Text>
+            <View style={styles.mainContainer}>
+                {/* Pricing Section */}
+                <View style={styles.sectionHeader}>
+                    <Ionicons name="cash" size={20} color="#800000" />
+                    <Text style={styles.sectionTitle}>Breakdown Pricing</Text>
+                </View>
+                <Text style={styles.sectionHint}>Add multiple pricing items to define your budget clearly.</Text>
 
-                {/* Payment */}
-                <Text style={styles.label}>Payment Amount ($) *</Text>
-                <TextInput
-                    style={styles.input}
-                    keyboardType="decimal-pad"
-                    value={payment}
-                    onChangeText={setPayment}
-                    placeholder="0.00"
-                    data-testid="payment-input"
-                />
+                {pricingItems.map((item, index) => (
+                    <PricingItemEditor
+                        key={item.tempId || item.id || String(index)}
+                        item={item}
+                        onUpdate={(updated) => updatePricingItem(index, updated)}
+                        onDelete={() => deletePricingItem(index)}
+                        isOnlyItem={pricingItems.length === 1}
+                    />
+                ))}
 
-                {/* Start Date */}
-                <Text style={styles.label}>Start Date *</Text>
-                <TextInput
-                    style={styles.input}
-                    value={startDate}
-                    onChangeText={setStartDate}
-                    placeholder="YYYY-MM-DD (e.g. 2025-05-01)"
-                    data-testid="start-date-input"
-                />
+                <Pressable style={styles.addItemButton} onPress={addPricingItem}>
+                    <Ionicons name="add-circle" size={20} color="#800000" />
+                    <Text style={styles.addItemText}>Add More Pricing</Text>
+                </Pressable>
 
-                {/* End Date */}
-                <Text style={styles.label}>End Date (Optional)</Text>
-                <TextInput
-                    style={styles.input}
-                    value={endDate}
-                    onChangeText={setEndDate}
-                    placeholder="YYYY-MM-DD (e.g. 2025-05-02)"
-                    data-testid="end-date-input"
-                />
+                {/* Logistics Section */}
+                <View style={[styles.sectionHeader, { marginTop: 40 }]}>
+                    <Ionicons name="calendar-clear" size={20} color="#800000" />
+                    <Text style={styles.sectionTitle}>Event Timeline</Text>
+                </View>
+
+                <View style={styles.datePickerRow}>
+                    <View style={styles.dateInputContainer}>
+                        <Text style={styles.inputLabel}>START DATE *</Text>
+                        <Pressable
+                            style={[styles.pickerButton, !startDate && styles.pickerButtonEmpty]}
+                            onPress={() => openCalendar('start')}
+                        >
+                            <Text style={[styles.pickerText, !startDate && styles.pickerTextEmpty]}>
+                                {startDate || "Select Date"}
+                            </Text>
+                            <Ionicons name="calendar-outline" size={18} color="#800000" />
+                        </Pressable>
+                    </View>
+
+                    <View style={styles.dateInputContainer}>
+                        <Text style={styles.inputLabel}>END DATE (OPT.)</Text>
+                        <Pressable
+                            style={styles.pickerButton}
+                            onPress={() => openCalendar('end')}
+                        >
+                            <Text style={[styles.pickerText, !endDate && styles.pickerTextEmpty]}>
+                                {endDate || "Select Date"}
+                            </Text>
+                            <Ionicons name="calendar-outline" size={18} color="#800000" />
+                        </Pressable>
+                    </View>
+                </View>
 
                 {/* Description */}
-                <Text style={styles.label}>Description (Optional)</Text>
-                <TextInput
-                    style={[styles.input, styles.multiline]}
-                    multiline
-                    numberOfLines={4}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder="Add additional details about this event"
-                    data-testid="description-input"
-                />
+                <View style={styles.descriptionContainer}>
+                    <Text style={styles.inputLabel}>ADDITIONAL NOTES</Text>
+                    <TextInput
+                        style={styles.multiline}
+                        multiline
+                        numberOfLines={4}
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="e.g. Include details about specific tasks or requirements."
+                        placeholderTextColor="#999"
+                    />
+                </View>
+
+                <View style={styles.spacer} />
+
+                {/* Actions */}
+                <Pressable
+                    style={[styles.createButton, saving && { opacity: 0.7 }]}
+                    onPress={handleCreateEvent}
+                    disabled={saving}
+                >
+                    {saving ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.createButtonText}>Create Event</Text>
+                    )}
+                </Pressable>
             </View>
 
-            {/* Create Event Button */}
-            <Pressable
-                style={[styles.createButton, saving && { opacity: 0.7 }]}
-                onPress={handleCreateEvent}
-                disabled={saving}
-                data-testid="create-event-button"
+            {/* Calendar Modal */}
+            <Modal
+                visible={showCalendar}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowCalendar(false)}
             >
-                {saving ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                    <>
-                        <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
-                        <Text style={styles.createButtonText}>Create Event</Text>
-                    </>
-                )}
-            </Pressable>
-
-            {/* Back Button */}
-            <Pressable style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="arrow-back" size={18} color="#800000" />
-                <Text style={styles.backButtonText}>Back</Text>
-            </Pressable>
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowCalendar(false)}
+                >
+                    <View style={styles.calendarContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Choose {calendarMode === 'start' ? 'Start' : 'End'} Date
+                            </Text>
+                            <Pressable onPress={() => setShowCalendar(false)}>
+                                <Ionicons name="close" size={24} color="#57534e" />
+                            </Pressable>
+                        </View>
+                        <Calendar
+                            onDayPress={onDateSelect}
+                            markedDates={{
+                                [calendarMode === 'start' ? startDate : endDate]: {
+                                    selected: true,
+                                    selectedColor: '#800000'
+                                }
+                            }}
+                            theme={{
+                                selectedDayBackgroundColor: '#800000',
+                                todayTextColor: '#800000',
+                                arrowColor: '#800000',
+                            }}
+                        />
+                    </View>
+                </Pressable>
+            </Modal>
         </KeyboardSafeView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#faf8f5",
-    },
-    content: {
-        padding: 20,
-        paddingBottom: 40,
-        marginTop: 40,
-    },
-    progressContainer: {
+    container: { flex: 1, backgroundColor: "#faf8f5" },
+    content: { paddingBottom: 60 },
+    headerArea: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 24,
-        paddingHorizontal: 40,
+        paddingHorizontal: 24,
+        paddingTop: 60,
+        paddingBottom: 24,
+        gap: 16,
     },
-    progressStep: {
-        alignItems: 'center',
+    backBtn: {
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#800000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
     },
-    progressCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#E5E5E5',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
+    pageTitle: { fontSize: 22, fontWeight: '800', color: '#800000', letterSpacing: -0.5 },
+    pageSubtitle: { fontSize: 12, fontWeight: '500', color: '#57534e', marginTop: 2 },
+
+    bannerContainer: {
+        width: '100%', height: 260, position: 'relative', overflow: 'hidden',
     },
-    progressActive: {
-        backgroundColor: '#800000',
+    bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    bannerPlaceholder: { backgroundColor: '#F0EBE9', alignItems: 'center', justifyContent: 'center' },
+    bannerOverlay: {
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        justifyContent: 'flex-start', alignItems: 'flex-end', padding: 24,
     },
-    progressCompleted: {
-        backgroundColor: '#34C759',
+    stepBadge: {
+        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.9)',
     },
-    progressNumber: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
+    stepText: { fontSize: 10, fontWeight: '800', color: '#800000', letterSpacing: 1 },
+
+    mainContainer: {
+        paddingHorizontal: 24, marginTop: -32,
+        borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        backgroundColor: '#faf8f5', paddingTop: 32,
     },
-    progressLabel: {
-        fontSize: 12,
-        color: '#999',
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+    sectionTitle: { fontSize: 20, fontWeight: '800', color: '#1c1917', letterSpacing: -0.3 },
+    sectionHint: { fontSize: 14, color: '#777', marginBottom: 24, fontWeight: '500' },
+
+    addItemButton: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+        paddingVertical: 18, borderRadius: 20,
+        backgroundColor: '#80000008',
+        borderWidth: 2, borderStyle: 'dashed', borderColor: 'rgba(128,0,0,0.15)',
     },
-    progressLabelActive: {
-        color: '#800000',
-        fontWeight: '600',
+    addItemText: { fontSize: 16, fontWeight: '800', color: '#800000' },
+
+    datePickerRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
+    dateInputContainer: { flex: 1 },
+    inputLabel: { fontSize: 10, fontWeight: '800', color: '#800000', letterSpacing: 1, marginBottom: 10 },
+    pickerButton: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        height: 52, borderRadius: 14, backgroundColor: '#FFF', paddingHorizontal: 16,
+        borderWidth: 1.5, borderColor: 'rgba(128,0,0,0.06)',
+        shadowColor: '#800000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05, shadowRadius: 6, elevation: 1,
     },
-    progressLabelCompleted: {
-        color: '#34C759',
-        fontWeight: '600',
-    },
-    progressLine: {
-        flex: 1,
-        height: 2,
-        backgroundColor: '#E5E5E5',
-        marginHorizontal: 8,
-    },
-    progressLineActive: {
-        backgroundColor: '#34C759',
-    },
-    previewSection: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 20,
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    previewTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
-        marginBottom: 12,
-    },
-    previewImage: {
-        width: '100%',
-        height: 150,
-        borderRadius: 12,
-        resizeMode: 'cover',
-        backgroundColor: '#F0F0F0',
-        marginBottom: 12,
-    },
-    previewEventTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1c1917',
-    },
-    section: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 30,
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        marginBottom: 16,
-        color: '#800000',
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: "600",
-        marginBottom: 8,
-        marginTop: 16,
-        color: "#1c1917",
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#DDDDDD",
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        backgroundColor: "#FFFFFF",
-        fontSize: 14,
-    },
+    pickerButtonEmpty: { borderColor: 'rgba(128,0,0,0.15)' },
+    pickerText: { fontSize: 14, fontWeight: '700', color: '#1c1917' },
+    pickerTextEmpty: { color: '#999', fontWeight: '500' },
+
+    descriptionContainer: { marginTop: 32 },
     multiline: {
-        minHeight: 100,
-        textAlignVertical: "top",
+        backgroundColor: '#FFF', borderRadius: 18, padding: 20,
+        fontSize: 15, color: '#1c1917', minHeight: 120, textAlignVertical: 'top',
+        borderWidth: 1.5, borderColor: 'rgba(128,0,0,0.06)',
+        shadowColor: '#800000', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
     },
+
+    spacer: { height: 40 },
     createButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#800000',
-        paddingVertical: 14,
-        borderRadius: 14,
-        marginBottom: 16,
+        backgroundColor: '#800000', paddingVertical: 18, borderRadius: 22,
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#800000', shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
     },
-    createButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+    createButtonText: { color: '#FFF', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
+
+    modalOverlay: {
+        flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
     },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
+    calendarContainer: {
+        backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        padding: 24, paddingBottom: 40,
     },
-    backButtonText: {
-        color: '#800000',
-        fontSize: 15,
-        fontWeight: '600',
+    modalHeader: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: 20,
     },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: '#800000' },
 });
 
 export default CreateEventStepTwo;

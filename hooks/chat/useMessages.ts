@@ -13,6 +13,8 @@ export interface Message {
     sender_id: string;
     receiver_id: string;
     message_text: string;
+    message_type: 'text' | 'completion_request' | 'system';
+    event_id: string | null;
     has_attachment: boolean;
     attachment_url: string | null;
     attachment_name: string | null;
@@ -27,6 +29,8 @@ interface SendMessageParams {
     conversationId: string;
     receiverId: string;
     text: string;
+    messageType?: 'text' | 'completion_request' | 'system';
+    eventId?: string | null;
     attachment?: {
         url: string;
         name: string;
@@ -202,7 +206,7 @@ export function useSendMessage() {
             params: SendMessageParams,
             paymentCompleted: boolean = false
         ): Promise<{ success: boolean; error?: string }> => {
-            const { conversationId, receiverId, text, attachment } = params;
+            const { conversationId, receiverId, text, attachment, messageType, eventId } = params;
 
             if (!text.trim() && !attachment) {
                 return { success: false, error: 'Message cannot be empty' };
@@ -233,6 +237,8 @@ export function useSendMessage() {
                     receiver_id: receiverId,
                     message_text: text.trim() || (attachment ? '📎 Attachment' : ''),
                     has_attachment: !!attachment,
+                    message_type: messageType || 'text',
+                    event_id: eventId || null,
                 };
 
                 // Add attachment fields if present

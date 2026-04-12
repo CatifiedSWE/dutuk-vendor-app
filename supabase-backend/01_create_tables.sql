@@ -257,3 +257,41 @@ COMMENT ON VIEW public.pastevents IS 'View of completed events (backward compati
 COMMENT ON VIEW public.pastpayments IS 'View of past payments (backward compatibility)';
 COMMENT ON VIEW public.pastreviews IS 'View of all reviews (backward compatibility)';
 COMMENT ON VIEW public.pastearnings IS 'View of past earnings (backward compatibility)';
+
+-- =====================================================
+-- MULTI-PRICING: event_pricing_items table
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.event_pricing_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID REFERENCES public.events(id) ON DELETE CASCADE NOT NULL,
+    label TEXT NOT NULL,
+    pricing_type TEXT NOT NULL CHECK (pricing_type IN ('fixed', 'range', 'custom')),
+    price DECIMAL(12, 2),
+    price_min DECIMAL(12, 2),
+    price_max DECIMAL(12, 2),
+    price_unit TEXT DEFAULT 'per_event' CHECK (price_unit IN (
+        'per_event', 'per_day', 'per_plate', 'per_person', 'per_hour', 'lumpsum'
+    )),
+    custom_note TEXT,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_pricing_event_id ON public.event_pricing_items(event_id);
+
+-- Denormalized pricing summary columns on events (for fast list reads)
+ALTER TABLE public.events
+    ADD COLUMN IF NOT EXISTS pricing_summary JSONB DEFAULT '[]'::jsonb;
+
+ALTER TABLE public.events
+    ADD COLUMN IF NOT EXISTS has_custom_pricing BOOLEAN DEFAULT false;
+
+ALTER TABLE public.events
+    ADD COLUMN IF NOT EXISTS total_min_budget DECIMAL(12, 2) DEFAULT 0;
+
+ALTER TABLE public.events
+    ADD COLUMN IF NOT EXISTS total_max_budget DECIMAL(12, 2) DEFAULT 0;
+
+COMMENT ON TABLE public.event_pricing_items IS 'Granular pricing line items for events (multi-pricing model)';

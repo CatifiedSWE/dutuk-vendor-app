@@ -310,3 +310,67 @@ GRANT SELECT ON public.pastevents TO authenticated;
 GRANT SELECT ON public.pastpayments TO authenticated;
 GRANT SELECT ON public.pastreviews TO authenticated;
 GRANT SELECT ON public.pastearnings TO authenticated;
+
+-- =====================================================
+-- MULTI-PRICING: RLS policies for event_pricing_items
+-- =====================================================
+
+ALTER TABLE public.event_pricing_items ENABLE ROW LEVEL SECURITY;
+
+-- Vendors can see pricing items for their own events
+CREATE POLICY "Vendors can view their event pricing items"
+    ON public.event_pricing_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_pricing_items.event_id
+            AND e.vendor_id = auth.uid()
+        )
+    );
+
+-- Vendors can insert pricing items for their own events
+CREATE POLICY "Vendors can insert their event pricing items"
+    ON public.event_pricing_items FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_pricing_items.event_id
+            AND e.vendor_id = auth.uid()
+        )
+    );
+
+-- Vendors can update pricing items for their own events
+CREATE POLICY "Vendors can update their event pricing items"
+    ON public.event_pricing_items FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_pricing_items.event_id
+            AND e.vendor_id = auth.uid()
+        )
+    );
+
+-- Vendors can delete pricing items for their own events
+CREATE POLICY "Vendors can delete their event pricing items"
+    ON public.event_pricing_items FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_pricing_items.event_id
+            AND e.vendor_id = auth.uid()
+        )
+    );
+
+-- Customers can view pricing items for events they are part of
+CREATE POLICY "Customers can view event pricing items"
+    ON public.event_pricing_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.events e
+            WHERE e.id = event_pricing_items.event_id
+            AND e.customer_id = auth.uid()
+        )
+    );
+
+-- Grant table access to authenticated users (RLS filters access)
+GRANT ALL ON public.event_pricing_items TO authenticated;

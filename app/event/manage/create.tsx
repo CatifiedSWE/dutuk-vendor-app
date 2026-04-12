@@ -1,618 +1,333 @@
-import logger from '@/utils/logger';
+import KeyboardSafeView from "@/components/KeyboardSafeView";
+import PricingItemEditor from "@/components/PricingItemEditor";
 import createEvent from "@/hooks/createEvent";
 import useImageUpload from "@/hooks/useImageUpload";
+import { createEmptyPricingItem, PricingItem } from "@/types/pricing";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from "react-native";
+import { Calendar } from "react-native-calendars";
 import Toast from "react-native-toast-message";
-import KeyboardSafeView from "@/components/KeyboardSafeView";
 
 const CreateEventScreen = () => {
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [selectingImage, setSelectingImage] = useState(false);
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [eventImageUrl, setEventImageUrl] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [description, setDescription] = useState("");
-  const [payment, setPayment] = useState("0");
+  const [pricingItems, setPricingItems] = useState<PricingItem[]>([
+    createEmptyPricingItem(0),
+  ]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const { pickImage, uploadImage, deleteImage } = useImageUpload();
+  // Calendar Modal State
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMode, setCalendarMode] = useState<'start' | 'end'>('start');
 
-  const handleEventImageSelect = async () => {
+  const { pickAndUploadImage } = useImageUpload();
+
+  const updatePricingItem = (index: number, updated: PricingItem) => {
+    setPricingItems((prev) => { const next = [...prev]; next[index] = updated; return next; });
+  };
+  const deletePricingItem = (index: number) => {
+    setPricingItems((prev) => prev.filter((_, i) => i !== index));
+  };
+  const addPricingItem = () => {
+    setPricingItems((prev) => [...prev, createEmptyPricingItem(prev.length)]);
+  };
+
+  const openCalendar = (mode: 'start' | 'end') => {
+    setCalendarMode(mode);
+    setShowCalendar(true);
+  };
+
+  const onDateSelect = (day: { dateString: string }) => {
+    if (calendarMode === 'start') {
+      setStartDate(day.dateString);
+    } else {
+      setEndDate(day.dateString);
+    }
+    setShowCalendar(false);
+  };
+
+  const validatePricingItems = (): boolean => {
+    for (let i = 0; i < pricingItems.length; i++) {
+      const item = pricingItems[i];
+      if (!item.label.trim()) {
+        Toast.show({ type: "error", text1: `Item ${i + 1}: Label required` }); return false;
+      }
+      if (item.pricing_type === "fixed" && (!item.price || item.price <= 0)) {
+        Toast.show({ type: "error", text1: `Item ${i + 1}: Price must be > ₹0` }); return false;
+      }
+      if (item.pricing_type === "range") {
+        if (!item.price_min || item.price_min <= 0) {
+          Toast.show({ type: "error", text1: `Item ${i + 1}: Min price must be > ₹0` }); return false;
+        }
+        if (item.price_max !== undefined && item.price_max < item.price_min) {
+          Toast.show({ type: "error", text1: `Item ${i + 1}: Max must be ≥ Min` }); return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const handleImagePicker = async () => {
     try {
       setSelectingImage(true);
-      
-      const imageUri = await pickImage({
+      const imageUrl = await pickAndUploadImage({
         bucket: "event-images",
         folder: "events",
-        maxWidth: 1920,
-        maxHeight: 1080,
-        quality: 0.8,
       });
-
-      if (imageUri) {
-        setSelectedImageUri(imageUri);
-        Toast.show({
-          type: 'success',
-          text1: 'Image Selected',
-          text2: 'Now click "Upload Image" to attach it to the event.'
-        });
-      }
+      if (imageUrl) setEventImageUrl(imageUrl);
     } catch (error: any) {
-      logger.error("Failed to select event image:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Selection Failed',
-        text2: error?.message || 'Failed to select image. Please try again.'
-      });
+      Toast.show({ type: 'error', text1: 'Selection Failed', text2: error?.message });
     } finally {
       setSelectingImage(false);
     }
   };
 
-  const handleEventImageUpload = async () => {
-    if (!selectedImageUri) {
-      Toast.show({
-        type: 'error',
-        text1: 'No Image Selected',
-        text2: 'Please select an image first.'
-      });
-      return;
-    }
-
-    try {
-      setUploadingImage(true);
-      
-      Toast.show({
-        type: 'info',
-        text1: 'Uploading...',
-        text2: 'Uploading image to server...'
-      });
-      
-      // Store old image URL before uploading new one
-      const oldImageUrl = eventImageUrl;
-      
-      const imageUrl = await uploadImage(selectedImageUri, {
-        bucket: "event-images",
-        folder: "events",
-      });
-
-      if (imageUrl) {
-        // Delete old image from storage if it exists (user is replacing image)
-        if (oldImageUrl) {
-          logger.log("Deleting old image:", oldImageUrl);
-          await deleteImage(oldImageUrl);
-        }
-
-        setEventImageUrl(imageUrl);
-        setSelectedImageUri(null); // Clear selection after upload
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Event image uploaded successfully!'
-        });
-      }
-    } catch (error: any) {
-      logger.error("Failed to upload event image:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Upload Failed',
-        text2: error?.message || 'Failed to upload event image. Please try again.'
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-    if (!eventImageUrl) return;
-
-    Alert.alert(
-      "Remove Image",
-      "Are you sure you want to remove this image? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Delete from storage
-              logger.log("Removing image from storage:", eventImageUrl);
-              await deleteImage(eventImageUrl);
-              
-              setEventImageUrl(null);
-              Toast.show({
-                type: 'success',
-                text1: 'Image Removed',
-                text2: 'Event image has been removed.'
-              });
-            } catch (error) {
-              logger.error("Error removing image:", error);
-              Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Failed to remove image.'
-              });
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleSave = async () => {
     if (!eventName.trim()) {
-      Toast.show({
-        type: "error",
-        text1: "Event title required",
-        text2: "Please enter an event title before saving.",
-      });
+      Toast.show({ type: "error", text1: "Title Required", text2: "Please enter an event title." });
       return;
     }
-
-    // Make image upload mandatory
     if (!eventImageUrl) {
-      Toast.show({
-        type: "error",
-        text1: "Image required",
-        text2: "Please upload an event image before creating the event.",
-      });
+      Toast.show({ type: "error", text1: "Image Required", text2: "Please upload an event cover photo." });
       return;
     }
-
-    // Validate start date if provided
-    if (startDate.trim()) {
-      const startDateObj = new Date(startDate.trim());
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to start of day for comparison
-
-      if (isNaN(startDateObj.getTime())) {
-        Toast.show({
-          type: "error",
-          text1: "Invalid start date",
-          text2: "Please provide a valid start date in YYYY-MM-DD format.",
-        });
-        return;
-      }
-
-      if (startDateObj < today) {
-        Toast.show({
-          type: "error",
-          text1: "Invalid start date",
-          text2: "Start date cannot be in the past.",
-        });
-        return;
-      }
-    }
-
-    // Validate end date if provided
-    if (endDate.trim()) {
-      const endDateObj = new Date(endDate.trim());
-
-      if (isNaN(endDateObj.getTime())) {
-        Toast.show({
-          type: "error",
-          text1: "Invalid end date",
-          text2: "Please provide a valid end date in YYYY-MM-DD format.",
-        });
-        return;
-      }
-
-      // If both dates are provided, validate that end date is after start date
-      if (startDate.trim()) {
-        const startDateObj = new Date(startDate.trim());
-        
-        if (endDateObj < startDateObj) {
-          Toast.show({
-            type: "error",
-            text1: "Invalid end date",
-            text2: "End date must be after the start date.",
-          });
-          return;
-        }
-      } else {
-        // If end date is provided but start date is not, validate end date is not in the past
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (endDateObj < today) {
-          Toast.show({
-            type: "error",
-            text1: "Invalid end date",
-            text2: "End date cannot be in the past.",
-          });
-          return;
-        }
-      }
-    }
+    if (!validatePricingItems()) return;
 
     setSaving(true);
     try {
       await createEvent({
         event: eventName.trim(),
         description: description.trim() || undefined,
-        payment: Number.parseFloat(payment) || 0,
+        pricingItems,
         status: "upcoming",
         startDate: startDate.trim(),
         endDate: endDate.trim() || undefined,
-        image_url: eventImageUrl || undefined,
+        image_url: eventImageUrl,
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Event created",
-        text2: "Your event has been added successfully.",
-      });
+      Toast.show({ type: "success", text1: "Event Created", text2: "Your event has been successfully added." });
       router.back();
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Creation failed",
-        text2: "Unable to create event. Check your details and try again.",
-      });
+      Toast.show({ type: "error", text1: "Creation Failed", text2: "An error occurred. Please try again." });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <KeyboardSafeView 
-      scrollable={true}
-      style={styles.container} 
-      contentContainerStyle={styles.content}
-    >
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Create Event</Text>
+    <KeyboardSafeView scrollable={true} style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.headerArea}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color="#800000" />
+        </Pressable>
+        <View>
+          <Text style={styles.pageTitle}>Create Event</Text>
+          <Text style={styles.pageSubtitle}>All-in-one Editor</Text>
+        </View>
+      </View>
 
-        {/* Event Image Section */}
-        <Text style={styles.label}>Event Image (Required) *</Text>
+      <View style={styles.mainContainer}>
+        {/* Cover Image Section */}
+        <Text style={styles.fieldLabel}>EVENT COVER PHOTO *</Text>
         {eventImageUrl ? (
           <View style={styles.imagePreviewContainer}>
-            <Image 
-              source={{ uri: eventImageUrl }} 
-              style={styles.imagePreview} 
-            />
-            <View style={styles.imageActionsRow}>
-              <Pressable 
-                style={styles.changeImageButton}
-                onPress={handleEventImageSelect}
-                disabled={selectingImage || uploadingImage}
-              >
-                {selectingImage ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Text style={styles.changeImageText}>Change Image</Text>
-                )}
-              </Pressable>
-              <Pressable 
-                style={styles.removeImageButton}
-                onPress={handleRemoveImage}
-                disabled={selectingImage || uploadingImage}
-              >
-                <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                <Text style={styles.removeImageText}>Remove</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : selectedImageUri ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image 
-              source={{ uri: selectedImageUri }} 
-              style={styles.imagePreview} 
-            />
-            <View style={styles.imageActionsRow}>
-              <Pressable 
-                style={[styles.uploadImageButton, uploadingImage && { opacity: 0.6 }]}
-                onPress={handleEventImageUpload}
-                disabled={uploadingImage}
-              >
-                {uploadingImage ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
-                    <Text style={styles.uploadImageButtonText}>Upload Image</Text>
-                  </>
-                )}
-              </Pressable>
-              <Pressable 
-                style={styles.changeSelectionButton}
-                onPress={handleEventImageSelect}
-                disabled={uploadingImage}
-              >
-                <Text style={styles.changeSelectionText}>Change Selection</Text>
-              </Pressable>
-            </View>
+            <Image source={{ uri: eventImageUrl }} style={styles.imagePreview} />
+            <Pressable style={styles.changeImageBtn} onPress={handleImagePicker}>
+              <Ionicons name="camera" size={20} color="#FFF" />
+            </Pressable>
           </View>
         ) : (
-          <Pressable 
-            style={styles.uploadButton}
-            onPress={handleEventImageSelect}
-            disabled={selectingImage}
-          >
+          <Pressable style={styles.uploadBox} onPress={handleImagePicker} disabled={selectingImage}>
             {selectingImage ? (
-              <View style={styles.uploadingContainer}>
-                <ActivityIndicator color="#007AFF" size="large" />
-                <Text style={styles.uploadingText}>Selecting...</Text>
-              </View>
+              <ActivityIndicator color="#800000" size="large" />
             ) : (
               <>
-                <Ionicons name="image-outline" size={40} color="#007AFF" />
-                <Text style={styles.uploadButtonText}>Select Event Image</Text>
-                <Text style={styles.uploadButtonSubtext}>Tap to choose from gallery</Text>
+                <Ionicons name="image-outline" size={32} color="#800000" />
+                <Text style={styles.uploadText}>Select Cover Image</Text>
               </>
             )}
           </Pressable>
         )}
 
-        <Text style={styles.label}>Event Title</Text>
-        <TextInput
-          style={styles.input}
-          value={eventName}
-          onChangeText={setEventName}
-          placeholder="Wedding Reception"
-        />
+        {/* Basic Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.fieldLabel}>EVENT TITLE *</Text>
+          <TextInput
+            style={styles.titleInput}
+            value={eventName}
+            onChangeText={setEventName}
+            placeholder="e.g. Wedding Reception"
+            placeholderTextColor="#999"
+          />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          multiline
-          numberOfLines={4}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Share more information about this event"
-        />
+          <View style={{ height: 24 }} />
 
-        <Text style={styles.label}>Payment (₹)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="decimal-pad"
-          value={payment}
-          onChangeText={setPayment}
-          placeholder="0.00"
-        />
+          <Text style={styles.fieldLabel}>TIMELINE</Text>
+          <View style={styles.dateRow}>
+            <Pressable style={styles.dateBtn} onPress={() => openCalendar('start')}>
+              <Ionicons name="calendar-outline" size={16} color="#800000" />
+              <Text style={[styles.dateText, !startDate && styles.dateTextEmpty]}>
+                {startDate || "Start Date"}
+              </Text>
+            </Pressable>
+            <Ionicons name="arrow-forward" size={14} color="#CCC" />
+            <Pressable style={styles.dateBtn} onPress={() => openCalendar('end')}>
+              <Ionicons name="calendar-outline" size={16} color="#800000" />
+              <Text style={[styles.dateText, !endDate && styles.dateTextEmpty]}>
+                {endDate || "End Date (Opt.)"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
-        <Text style={styles.label}>Start Date (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={startDate}
-          onChangeText={setStartDate}
-          placeholder="YYYY-MM-DD (e.g. 2025-01-01)"
-        />
+        <Text style={[styles.fieldLabel, { marginTop: 32 }]}>PRICING BREAKDOWN *</Text>
+        {pricingItems.map((item, index) => (
+          <PricingItemEditor
+            key={item.tempId || item.id || String(index)}
+            item={item}
+            onUpdate={(u) => updatePricingItem(index, u)}
+            onDelete={() => deletePricingItem(index)}
+            isOnlyItem={pricingItems.length === 1}
+          />
+        ))}
 
-        <Text style={styles.label}>End Date (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={endDate}
-          onChangeText={setEndDate}
-          placeholder="YYYY-MM-DD (e.g. 2025-01-02)"
-        />
+        <Pressable style={styles.addItemBtn} onPress={addPricingItem}>
+          <Ionicons name="add-circle" size={20} color="#800000" />
+          <Text style={styles.addItemText}>Add Another Pricing Item</Text>
+        </Pressable>
+
+        <View style={{ marginTop: 32 }}>
+          <Text style={styles.fieldLabel}>ADDITIONAL NOTES</Text>
+          <TextInput
+            style={styles.multiline}
+            multiline
+            numberOfLines={4}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Share more information about this event..."
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        <View style={{ height: 40 }} />
+
+        <Pressable
+          style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#FFF" size="small" />
+          ) : (
+            <Text style={styles.saveBtnText}>Save Event</Text>
+          )}
+        </Pressable>
       </View>
 
-      <Pressable
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-        onPress={handleSave}
-        disabled={saving}
-      >
-        {saving ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <>
-            <Ionicons name="flame-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.saveButtonText}>Create Event</Text>
-          </>
-        )}
-      </Pressable>
-
-      <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={18} color="#007AFF" />
-        <Text style={styles.backButtonText}>Cancel</Text>
-      </Pressable>
+      <Modal visible={showCalendar} transparent={true} animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowCalendar(false)}>
+          <View style={styles.calendarCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select {calendarMode === 'start' ? 'Start' : 'End'} Date</Text>
+              <Pressable onPress={() => setShowCalendar(false)}>
+                <Ionicons name="close" size={24} color="#800000" />
+              </Pressable>
+            </View>
+            <Calendar
+              onDayPress={onDateSelect}
+              markedDates={{ [calendarMode === 'start' ? startDate : endDate]: { selected: true, selectedColor: '#800000' } }}
+              theme={{ selectedDayBackgroundColor: '#800000', todayTextColor: '#800000', arrowColor: '#800000' }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardSafeView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#faf8f5",
+  container: { flex: 1, backgroundColor: "#faf8f5" },
+  content: { paddingBottom: 40 },
+  headerArea: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24,
+    paddingTop: 60, paddingBottom: 24, gap: 16,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  backBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center', elevation: 2,
   },
-  section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 30,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 16,
-    color: '#800000',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-    marginTop: 14,
-    color: "#1c1917",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#DDDDDD",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
-    fontSize: 14,
-  },
-  multiline: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#800000",
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginBottom: 16,
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  backButtonText: {
-    color: "#800000",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  pageTitle: { fontSize: 22, fontWeight: '900', color: '#1c1917' },
+  pageSubtitle: { fontSize: 12, fontWeight: '700', color: '#800000', marginTop: -2, opacity: 0.6 },
+
+  mainContainer: { padding: 24 },
+  fieldLabel: { fontSize: 10, fontWeight: '900', color: '#800000', letterSpacing: 1.5, marginBottom: 12, marginLeft: 2 },
+
   imagePreviewContainer: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
+    width: '100%', height: 180, borderRadius: 24, overflow: 'hidden', position: 'relative', marginBottom: 32,
   },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-    backgroundColor: '#F0F0F0',
+  imagePreview: { width: '100%', height: '100%', resizeMode: 'cover' },
+  changeImageBtn: {
+    position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10, borderRadius: 20,
   },
-  changeImageButton: {
-    flex: 1,
-    backgroundColor: '#800000',
-    padding: 12,
-    alignItems: 'center',
-    borderRadius: 8,
+  uploadBox: {
+    width: '100%', height: 180, borderRadius: 24, backgroundColor: '#FFF',
+    borderStyle: 'dashed', borderWidth: 2, borderColor: 'rgba(128,0,0,0.15)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 32,
   },
-  changeImageText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
+  uploadText: { marginTop: 8, fontSize: 14, fontWeight: '700', color: '#800000' },
+
+  card: {
+    backgroundColor: '#FFF', borderRadius: 24, padding: 24, elevation: 4,
+    shadowColor: '#800000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10,
   },
-  removeImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FF3B30',
-    backgroundColor: '#FFF',
+  titleInput: { fontSize: 16, fontWeight: '700', color: '#1c1917', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingVertical: 10 },
+
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dateBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FAF8F5',
+    paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F0F0F0',
   },
-  removeImageText: {
-    color: '#FF3B30',
-    fontWeight: '600',
-    fontSize: 14,
+  dateText: { fontSize: 13, fontWeight: '700', color: '#1c1917' },
+  dateTextEmpty: { color: '#BBB', fontWeight: '500' },
+
+  addItemBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 16, backgroundColor: '#80000008', borderRadius: 18,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(128,0,0,0.2)',
   },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F8F9FF',
-    marginBottom: 16,
+  addItemText: { fontSize: 15, fontWeight: '700', color: '#800000' },
+
+  multiline: {
+    backgroundColor: '#FFF', borderRadius: 20, padding: 16, minHeight: 100, fontSize: 15,
+    elevation: 2, textAlignVertical: 'top',
   },
-  uploadButtonText: {
-    marginTop: 12,
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 16,
+
+  saveBtn: {
+    backgroundColor: '#800000', paddingVertical: 20, borderRadius: 24, alignItems: 'center',
+    shadowColor: '#800000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12,
   },
-  uploadButtonSubtext: {
-    marginTop: 4,
-    color: '#666666',
-    fontSize: 13,
-  },
-  uploadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  uploadingText: {
-    marginTop: 12,
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  imageActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-  },
-  uploadImageButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#800000',
-    padding: 12,
-    borderRadius: 8,
-  },
-  uploadImageButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  changeSelectionButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#800000',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#FFF',
-  },
-  changeSelectionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  saveBtnText: { color: '#FFF', fontSize: 17, fontWeight: '800' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  calendarCard: { backgroundColor: '#FFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#800000' },
 });
 
 export default CreateEventScreen;

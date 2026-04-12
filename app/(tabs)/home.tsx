@@ -368,11 +368,12 @@ const Home = () => {
               contentContainerStyle={styles.manageEventsScroll}
             >
               <Pressable
-                style={styles.manageCardSmall}
+                style={styles.addEventCardSmall}
                 onPress={() => router.push('/event/manage/createStepOne')}
               >
                 <View style={styles.addEventCardImageSmall}>
-                  <Ionicons name="add-circle" size={48} color="#800000" />
+                  <Ionicons name="add-circle" size={40} color="#800000" />
+                  <Text style={styles.addEventLabel}>add new event</Text>
                 </View>
               </Pressable>
 
@@ -581,15 +582,18 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: 24,
     paddingHorizontal: 28,
   },
   orderCountBadge: {
     backgroundColor: 'rgba(128, 0, 0, 0.1)',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    height: 24,
+    minWidth: 24,
     borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newOrderBadge: {
     backgroundColor: '#FF3B30',
@@ -626,24 +630,29 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 64,
   },
+  addEventCardSmall: {
+    width: 110,
+    marginRight: 20,
+  },
   addEventCardImageSmall: {
-    width: 220,
+    width: 110,
     height: 140,
-    borderRadius: 20,
-    marginBottom: 10,
+    borderRadius: 24,
     backgroundColor: 'rgba(128, 0, 0, 0.04)',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(128, 0, 0, 0.2)',
+    borderColor: 'rgba(128, 0, 0, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
   addEventLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: '#800000',
-    marginTop: 4,
+    textAlign: 'center',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   orderCountText: {
     color: '#800000',
@@ -902,7 +911,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#1c1917',
-    marginBottom: 20,
     letterSpacing: -0.4,
   },
   viewAllButton: {

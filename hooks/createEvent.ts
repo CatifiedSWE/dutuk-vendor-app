@@ -1,5 +1,7 @@
+import { saveEventPricing } from '@/hooks/useEventPricing';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useVendorStore } from '@/store/useVendorStore';
+import { calculateCompatPayment, PricingItem } from '@/types/pricing';
 import logger from '@/utils/logger';
 import { supabase } from "@/utils/supabase";
 
@@ -8,7 +10,9 @@ type EventStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
 export type CreateEventPayload = {
   event: string;
   description?: string;
+  /** @deprecated Pass pricingItems instead. Only used as fallback if pricingItems is empty. */
   payment?: number;
+  pricingItems?: PricingItem[];
   status?: EventStatus;
   startDate: string;
   endDate?: string;
@@ -39,6 +43,11 @@ const createEvent = async (payload: CreateEventPayload) => {
       throw new Error("Start date is required");
     }
 
+    // Calculate backward-compat payment from pricing items
+    const compatPayment = payload.pricingItems && payload.pricingItems.length > 0
+      ? calculateCompatPayment(payload.pricingItems)
+      : (payload.payment ?? 0);
+
     const { data, error } = await supabase
       .from("events")
       .insert({
@@ -49,7 +58,7 @@ const createEvent = async (payload: CreateEventPayload) => {
         event: payload.event.trim(),
         description: payload.description?.trim() || null,
         date: dateArray,
-        payment: payload.payment ?? 0,
+        payment: compatPayment,
         status: payload.status || "upcoming",
         image_url: payload.image_url || null,
         banner_url: payload.banner_url || null,
@@ -61,6 +70,11 @@ const createEvent = async (payload: CreateEventPayload) => {
       throw error;
     }
 
+    // Save pricing items to the child table (trigger will sync summary to events)
+    if (data && payload.pricingItems && payload.pricingItems.length > 0) {
+      await saveEventPricing(data.id, payload.pricingItems);
+    }
+
     return data;
   } catch (error) {
     logger.error("Error creating event:", error);
@@ -69,4 +83,3 @@ const createEvent = async (payload: CreateEventPayload) => {
 };
 
 export default createEvent;
-
